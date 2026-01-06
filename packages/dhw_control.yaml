@@ -205,44 +205,39 @@ dhw_control:
           unique_id: dhw_active_threshold_ckwh
           unit_of_measurement: 'c/kWh'
           device_class: monetary
-          state: >
-            {% set avg_today = states('sensor.nordpool_average_today') |
-            float(0) %} {% set factor    =
-            states('input_number.dynamic_threshold_factor') | float(0.85) %} {%
-            set dyn       = (avg_today * factor) if avg_today > 0 else 0 %} {%
-            set cap       = states('input_number.price_cap_cents') | float(15)
-            %} {% set mode      = states('input_select.dhw_pricing_mode') %} {%
-            if mode == 'Dynamic + cap' %}
-              {{ ([ dyn if dyn > 0 else 999, cap ] | min) | round(2) }}
+          state: |
+            {% set avg_today = states('sensor.nordpool_average_today') | float(0) %}
+            {% set factor = states('input_number.dynamic_threshold_factor') | float(0.85) %}
+            {% set dyn = (avg_today * factor) if avg_today > 0 else 0 %}
+            {% set cap = states('input_number.price_cap_cents') | float(15) %}
+            {% set mode = states('input_select.dhw_pricing_mode') %}
+            {% if mode == 'Dynamic + cap' %}
+              {{ ([dyn if dyn > 0 else 999, cap] | min) | round(2) }}
             {% elif mode == 'Dynamic only' %}
               {{ (dyn if dyn > 0 else 999) | round(2) }}
-            {% else %}  {# Manual cap #}
+            {% else %}
               {{ cap | round(2) }}
             {% endif %}
           attributes:
-            dynamic_today: >
+            dynamic_today: |
               {% set avg = states('sensor.nordpool_average_today') | float(0) %}
-              {% set k   = states('input_number.dynamic_threshold_factor') |
-              float(0.85) %} {{ (avg * k) | round(2) if avg > 0 else 'unknown'
-              }}
+              {% set k = states('input_number.dynamic_threshold_factor') | float(0.85) %}
+              {{ (avg * k) | round(2) if avg > 0 else 'unknown' }}
             mode: "{{ states('input_select.dhw_pricing_mode') }}"
             cap: "{{ states('input_number.price_cap_cents') }}"
 
     - binary_sensor:
         - name: 'DHW manual today active'
           unique_id: dhw_manual_today_active
-          state: >
+          state: |
             {% if is_state('input_boolean.dhw_manual_today_enable','off') %}
               false
             {% else %}
               {% set active = false %}
               {% for slot in [1,2] %}
-                {% set s = states('input_datetime.dhw_manual_today_start_slot' ~
-            slot) %}
-                {% set e = states('input_datetime.dhw_manual_today_end_slot' ~
-            slot) %}
-                {% if s not in ['unknown','unavailable',''] and e not in
-            ['unknown','unavailable',''] %}
+                {% set s = states('input_datetime.dhw_manual_today_start_slot' ~ slot) %}
+                {% set e = states('input_datetime.dhw_manual_today_end_slot' ~ slot) %}
+                {% if s not in ['unknown','unavailable',''] and e not in ['unknown','unavailable',''] %}
                   {% if now() >= today_at(s) and now() < today_at(e) %}
                     {% set active = true %}
                   {% endif %}
@@ -253,53 +248,43 @@ dhw_control:
 
         - name: 'DHW cheapest window active now'
           unique_id: dhw_cheapest_window_active_now
-          state: >-
-            {% set s = state_attr('sensor.dhw_cheapest_window_detail','start')
-            %} {% set e = state_attr('sensor.dhw_cheapest_window_detail','end')
-            %} {% if s in ['unknown','unavailable',''] or e in
-            ['unknown','unavailable',''] %}
+          state: |
+            {% set s = state_attr('sensor.dhw_cheapest_window_detail','start') %}
+            {% set e = state_attr('sensor.dhw_cheapest_window_detail','end') %}
+            {% if s in ['unknown','unavailable',''] or e in ['unknown','unavailable',''] %}
               false
             {% else %}
               {{ now() >= as_datetime(s) and now() < as_datetime(e) }}
             {% endif %}
           attributes:
-            window_start:
-              "{{ state_attr('sensor.dhw_cheapest_window_detail','start') }}"
-            window_end:
-              "{{ state_attr('sensor.dhw_cheapest_window_detail','end') }}"
-            length_minutes:
-              "{{
-              state_attr('sensor.dhw_cheapest_window_detail','length_minutes')
-              }}"
-            source:
-              "{{ state_attr('sensor.dhw_cheapest_window_detail','source') }}"
+            window_start: "{{ state_attr('sensor.dhw_cheapest_window_detail','start') }}"
+            window_end: "{{ state_attr('sensor.dhw_cheapest_window_detail','end') }}"
+            length_minutes: "{{ state_attr('sensor.dhw_cheapest_window_detail','length_minutes') }}"
+            source: "{{ state_attr('sensor.dhw_cheapest_window_detail','source') }}"
 
         # Morning window 05-07 with reasonable price (<= active threshold)
         - name: 'DHW morning reasonable' # -> binary_sensor.dhw_morning_reasonable
           unique_id: dhw_morning_reasonable
-          state: >
-            {% set price_now =
-            states('sensor.current_electricity_price_in_cents') | float(999) %}
-            {% set thr       = states('sensor.dhw_active_threshold_ckwh') |
-            float(0) %} {% set hard_cap  = 10.0 %} {% set start     =
-            today_at(states('input_datetime.dhw_morning_start')) %} {% set
-            end       = today_at(states('input_datetime.dhw_morning_end')) %} {%
-            set enabled   = is_state('input_boolean.dhw_morning_enable','on') %}
-            {{ enabled and now() >= start and now() < end and price_now <= thr
-            and price_now <= hard_cap }}
+          state: |
+            {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
+            {% set thr = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
+            {% set hard_cap = 10.0 %}
+            {% set start = today_at(states('input_datetime.dhw_morning_start')) %}
+            {% set end = today_at(states('input_datetime.dhw_morning_end')) %}
+            {% set enabled = is_state('input_boolean.dhw_morning_enable','on') %}
+            {{ enabled and now() >= start and now() < end and price_now <= thr and price_now <= hard_cap }}
           attributes:
-            reason: >
-              {% set price_now =
-              states('sensor.current_electricity_price_in_cents') | float(999)
-              %} {% set thr       = states('sensor.dhw_active_threshold_ckwh') |
-              float(0) %} {% set hard_cap  = 10.0 %} {% set start     =
-              today_at(states('input_datetime.dhw_morning_start')) %} {% set
-              end       = today_at(states('input_datetime.dhw_morning_end')) %}
-              {% set enabled   =
-              is_state('input_boolean.dhw_morning_enable','on') %} {% set
-              within    = (now() >= start and now() < end) %} {% set ok_thr    =
-              (price_now <= thr) %} {% set ok_cap    = (price_now <= hard_cap)
-              %} {{
+            reason: |
+              {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
+              {% set thr = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
+              {% set hard_cap = 10.0 %}
+              {% set start = today_at(states('input_datetime.dhw_morning_start')) %}
+              {% set end = today_at(states('input_datetime.dhw_morning_end')) %}
+              {% set enabled = is_state('input_boolean.dhw_morning_enable','on') %}
+              {% set within = (now() >= start and now() < end) %}
+              {% set ok_thr = (price_now <= thr) %}
+              {% set ok_cap = (price_now <= hard_cap) %}
+              {{
                 {
                   "enabled": enabled,
                   "now": now() | string,
@@ -311,33 +296,31 @@ dhw_control:
                   "hard_cap_ckwh": hard_cap,
                   "passes_threshold": ok_thr,
                   "passes_hard_cap": ok_cap,
-                  "final_state_would_be_on": (enabled and within and ok_thr and
-              ok_cap)
+                  "final_state_would_be_on": (enabled and within and ok_thr and ok_cap)
                 } | tojson
               }}
 
         - name: 'DHW should heat now' # -> binary_sensor.dhw_should_heat_now
           unique_id: dhw_should_heat_now
-          state: >-
-            {% set enabled      = is_state('input_boolean.dhw_automation_enabled','on') %}
-            {% set manual_on    = is_state('binary_sensor.dhw_manual_today_active','on') %}
-            {% set morning_ok   = is_state('binary_sensor.dhw_morning_reasonable','on') %}
-            {% set cheapest_on  = is_state('binary_sensor.dhw_cheapest_window_active_now','on') %}
+          state: |
+            {% set enabled = is_state('input_boolean.dhw_automation_enabled','on') %}
+            {% set manual_on = is_state('binary_sensor.dhw_manual_today_active','on') %}
+            {% set morning_ok = is_state('binary_sensor.dhw_morning_reasonable','on') %}
+            {% set cheapest_on = is_state('binary_sensor.dhw_cheapest_window_active_now','on') %}
             {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
-            {% set price_now    = states('sensor.current_electricity_price_in_cents') | float(999) %}
-            {% set thr          = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
+            {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
+            {% set thr = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
             {{ vicare_boost or (enabled and (manual_on or morning_ok or (cheapest_on and price_now <= thr))) }}
-
           attributes:
-            reason: >-
-              {% set manual_on     = is_state('binary_sensor.dhw_manual_today_active','on') %}
-              {% set morning_ok    = is_state('binary_sensor.dhw_morning_reasonable','on') %}
-              {% set cheapest_on   = is_state('binary_sensor.dhw_cheapest_window_active_now','on') %}
-              {% set vicare_boost  = is_state('binary_sensor.maalampo_one_time_charge','on') %}
-              {% set enabled       = is_state('input_boolean.dhw_automation_enabled','on') %}
-              {% set price_now     = states('sensor.current_electricity_price_in_cents') | float(999) %}
-              {% set thr           = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
-              {% set r             = [] %}
+            reason: |
+              {% set manual_on = is_state('binary_sensor.dhw_manual_today_active','on') %}
+              {% set morning_ok = is_state('binary_sensor.dhw_morning_reasonable','on') %}
+              {% set cheapest_on = is_state('binary_sensor.dhw_cheapest_window_active_now','on') %}
+              {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
+              {% set enabled = is_state('input_boolean.dhw_automation_enabled','on') %}
+              {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
+              {% set thr = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
+              {% set r = [] %}
               {% if vicare_boost %}
                 {% set r = r + ['VICARE BOOST'] %}
               {% endif %}
@@ -351,32 +334,26 @@ dhw_control:
                 {% set r = r + ['MORNING'] %}
               {% endif %}
               {{ r | join(' + ') if r else 'NO' }}
-            price_now_ckwh: >-
-              {{ states('sensor.current_electricity_price_in_cents') | float(999) }}
-            threshold_ckwh: >-
-              {{ states('sensor.dhw_active_threshold_ckwh') | float(0) }}
+            price_now_ckwh: "{{ states('sensor.current_electricity_price_in_cents') | float(999) }}"
+            threshold_ckwh: "{{ states('sensor.dhw_active_threshold_ckwh') | float(0) }}"
 
     - sensor:
         - name: 'DHW cheapest window (detail)'
           unique_id: dhw_cheapest_window_detail
-          state: >-
-            {% set merged =
-            state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or
-            [] %} {% set window_hours =
-            states('input_number.dhw_cheapest_window_hours') | float(2) %} {%
-            set slots_needed = (window_hours * 4) | int %} {% if merged | length
-            < slots_needed or slots_needed <= 0 %}
+          state: |
+            {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+            {% set window_hours = states('input_number.dhw_cheapest_window_hours') | float(2) %}
+            {% set slots_needed = (window_hours * 4) | int %}
+            {% if merged | length < slots_needed or slots_needed <= 0 %}
               unknown
             {% else %}
               ready
             {% endif %}
           attributes:
-            start: >-
-              {% set merged =
-              state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
-              or [] %} {% set k =
-              (states('input_number.dhw_cheapest_window_hours') | float(2) * 4)
-              | int %} {% if merged | length < k or k <= 0 %}
+            start: |
+              {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+              {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
+              {% if merged | length < k or k <= 0 %}
                 unknown
               {% else %}
                 {% set ns = namespace(best_sum=9e9, best_i=-1) %}
@@ -390,14 +367,12 @@ dhw_control:
                     {% set ns.best_i = i %}
                   {% endif %}
                 {% endfor %}
-                {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown'
-              }} {% endif %}
-            end: >-
-              {% set merged =
-              state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
-              or [] %} {% set k =
-              (states('input_number.dhw_cheapest_window_hours') | float(2) * 4)
-              | int %} {% if merged | length < k or k <= 0 %}
+                {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown' }}
+              {% endif %}
+            end: |
+              {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+              {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
+              {% if merged | length < k or k <= 0 %}
                 unknown
               {% else %}
                 {% set ns = namespace(best_sum=9e9, best_i=-1) %}
@@ -411,14 +386,12 @@ dhw_control:
                     {% set ns.best_i = i %}
                   {% endif %}
                 {% endfor %}
-                {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else
-              'unknown' }} {% endif %}
-            sum_price: >-
-              {% set merged =
-              state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
-              or [] %} {% set k =
-              (states('input_number.dhw_cheapest_window_hours') | float(2) * 4)
-              | int %} {% if merged | length < k or k <= 0 %}
+                {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else 'unknown' }}
+              {% endif %}
+            sum_price: |
+              {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+              {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
+              {% if merged | length < k or k <= 0 %}
                 unknown
               {% else %}
                 {% set ns = namespace(best_sum=9e9) %}
@@ -433,57 +406,43 @@ dhw_control:
                 {% endfor %}
                 {{ ns.best_sum | round(3) }}
               {% endif %}
-            avg_price: >-
-              {% set sumc = this.attributes.sum_price %} {% set k =
-              (states('input_number.dhw_cheapest_window_hours') | float(2) * 4)
-              | int %} {% if sumc in ['unknown','unavailable',''] or k <= 0 %}
+            avg_price: |
+              {% set sumc = this.attributes.sum_price %}
+              {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
+              {% if sumc in ['unknown','unavailable',''] or k <= 0 %}
                 unknown
               {% else %}
                 {{ (sumc / k) | round(3) }}
               {% endif %}
-            length_minutes:
-              "{{ (states('input_number.dhw_cheapest_window_hours') | float(2) *
-              60) | int }}"
+            length_minutes: "{{ (states('input_number.dhw_cheapest_window_hours') | float(2) * 60) | int }}"
             source: 'sensor.nordpool_3_day_merged_prices.merged_slots'
 
     - sensor:
         - name: 'DHW cheapest window (label)'
           unique_id: dhw_cheapest_window_label
-          state: >-
-            {% set s = state_attr('sensor.dhw_cheapest_window_detail','start')
-            %} {% set e = state_attr('sensor.dhw_cheapest_window_detail','end')
-            %} {% set avg =
-            state_attr('sensor.dhw_cheapest_window_detail','avg_price') %} {% if
-            s in ['unknown','unavailable',''] or e in
-            ['unknown','unavailable',''] %}
+          state: |
+            {% set s = state_attr('sensor.dhw_cheapest_window_detail','start') %}
+            {% set e = state_attr('sensor.dhw_cheapest_window_detail','end') %}
+            {% set avg = state_attr('sensor.dhw_cheapest_window_detail','avg_price') %}
+            {% if s in ['unknown','unavailable',''] or e in ['unknown','unavailable',''] %}
               unknown
             {% else %}
-              {{ as_datetime(s) | as_local | string }} → {{ as_datetime(e) |
-            as_local | string }} (avg {{ avg }}) {% endif %}
+              {{ as_datetime(s) | as_local | string }} → {{ as_datetime(e) | as_local | string }} (avg {{ avg }})
+            {% endif %}
           attributes:
-            start:
-              "{{ state_attr('sensor.dhw_cheapest_window_detail','start') }}"
+            start: "{{ state_attr('sensor.dhw_cheapest_window_detail','start') }}"
             end: "{{ state_attr('sensor.dhw_cheapest_window_detail','end') }}"
-            length_minutes:
-              "{{
-              state_attr('sensor.dhw_cheapest_window_detail','length_minutes')
-              }}"
-            sum_price:
-              "{{ state_attr('sensor.dhw_cheapest_window_detail','sum_price') }}"
-            avg_price:
-              "{{ state_attr('sensor.dhw_cheapest_window_detail','avg_price') }}"
-            source:
-              "{{ state_attr('sensor.dhw_cheapest_window_detail','source') }}"
+            length_minutes: "{{ state_attr('sensor.dhw_cheapest_window_detail','length_minutes') }}"
+            sum_price: "{{ state_attr('sensor.dhw_cheapest_window_detail','sum_price') }}"
+            avg_price: "{{ state_attr('sensor.dhw_cheapest_window_detail','avg_price') }}"
+            source: "{{ state_attr('sensor.dhw_cheapest_window_detail','source') }}"
 
-    # --- STRICT slot (≤ 1.0 c/kWh) ---
-    - sensor:
         - name: 'DHW legionella cheapest slot STRICT'
           unique_id: dhw_legionella_cheapest_slot_strict
-          state: >
-            {% set merged =
-            state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or
-            [] %} {% set k = (states('input_number.dhw_legionella_hours') |
-            float(3) * 4) | int %} {% if merged | length < k or k <= 0 %}
+          state: |
+            {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+            {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+            {% if merged | length < k or k <= 0 %}
               unknown
             {% else %}
               {% set ns = namespace(best_sum=9e9, best_i=-1) %}
@@ -505,56 +464,62 @@ dhw_control:
               {% endif %}
             {% endif %}
           attributes:
-            start: >
-              {% set merged =
-              state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
-              or [] %} {% set k = (states('input_number.dhw_legionella_hours') |
-              float(3) * 4) | int %} {% if merged | length < k or k <= 0 %}
+            start: |
+              {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+              {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+              {% if merged | length < k or k <= 0 %}
                 unknown
               {% else %}
                 {% set ns = namespace(best_sum=9e9, best_i=-1) %}
                 {% for i in range((merged | length) - k + 1) %}
                   {% set sumv = 0.0 %}
-                  {% for j in range(k) %}{% set sumv = sumv +
-              (merged[i+j]['price'] | float) %}{% endfor %}
-                  {% if sumv < ns.best_sum %}{% set ns.best_sum = sumv %}{% set
-              ns.best_i = i %}{% endif %}
+                  {% for j in range(k) %}
+                    {% set sumv = sumv + (merged[i+j]['price'] | float) %}
+                  {% endfor %}
+                  {% if sumv < ns.best_sum %}
+                    {% set ns.best_sum = sumv %}
+                    {% set ns.best_i = i %}
+                  {% endif %}
                 {% endfor %}
                 {% set avg_price = (ns.best_sum / k) | float %}
-                {{ merged[ns.best_i]['start'] if ns.best_i >= 0 and avg_price <=
-              1.0 else 'unknown' }} {% endif %}
-            end: >
-              {% set merged =
-              state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
-              or [] %} {% set k = (states('input_number.dhw_legionella_hours') |
-              float(3) * 4) | int %} {% if merged | length < k or k <= 0 %}
+                {{ merged[ns.best_i]['start'] if ns.best_i >= 0 and avg_price <= 1.0 else 'unknown' }}
+              {% endif %}
+            end: |
+              {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+              {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+              {% if merged | length < k or k <= 0 %}
                 unknown
               {% else %}
                 {% set ns = namespace(best_sum=9e9, best_i=-1) %}
                 {% for i in range((merged | length) - k + 1) %}
                   {% set sumv = 0.0 %}
-                  {% for j in range(k) %}{% set sumv = sumv +
-              (merged[i+j]['price'] | float) %}{% endfor %}
-                  {% if sumv < ns.best_sum %}{% set ns.best_sum = sumv %}{% set
-              ns.best_i = i %}{% endif %}
+                  {% for j in range(k) %}
+                    {% set sumv = sumv + (merged[i+j]['price'] | float) %}
+                  {% endfor %}
+                  {% if sumv < ns.best_sum %}
+                    {% set ns.best_sum = sumv %}
+                    {% set ns.best_i = i %}
+                  {% endif %}
                 {% endfor %}
                 {% set avg_price = (ns.best_sum / k) | float %}
-                {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 and
-              avg_price <= 1.0 else 'unknown' }} {% endif %}
-            avg_price: >
-              {% set merged =
-              state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
-              or [] %} {% set k = (states('input_number.dhw_legionella_hours') |
-              float(3) * 4) | int %} {% if merged | length < k or k <= 0 %}
+                {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 and avg_price <= 1.0 else 'unknown' }}
+              {% endif %}
+            avg_price: |
+              {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+              {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+              {% if merged | length < k or k <= 0 %}
                 unknown
               {% else %}
                 {% set ns = namespace(best_sum=9e9, best_i=-1) %}
                 {% for i in range((merged | length) - k + 1) %}
                   {% set sumv = 0.0 %}
-                  {% for j in range(k) %}{% set sumv = sumv +
-              (merged[i+j]['price'] | float) %}{% endfor %}
-                  {% if sumv < ns.best_sum %}{% set ns.best_sum = sumv %}{% set
-              ns.best_i = i %}{% endif %}
+                  {% for j in range(k) %}
+                    {% set sumv = sumv + (merged[i+j]['price'] | float) %}
+                  {% endfor %}
+                  {% if sumv < ns.best_sum %}
+                    {% set ns.best_sum = sumv %}
+                    {% set ns.best_i = i %}
+                  {% endif %}
                 {% endfor %}
                 {% if ns.best_i >= 0 %}
                   {{ (ns.best_sum / k) | round(3) }}
@@ -563,68 +528,71 @@ dhw_control:
                 {% endif %}
               {% endif %}
 
-    # --- ANY slot (cheapest, ignore price constraint) ---
-    - sensor:
         - name: 'DHW legionella cheapest slot ANY'
           unique_id: dhw_legionella_cheapest_slot_any
-          state: >
-            {% set merged =
-            state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or
-            [] %} {% set k = (states('input_number.dhw_legionella_hours') |
-            float(3) * 4) | int %} {% if merged | length < k or k <= 0 %}
+          state: |
+            {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+            {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+            {% if merged | length < k or k <= 0 %}
               unknown
             {% else %}
               ready
             {% endif %}
           attributes:
-            start: >
-              {% set merged =
-              state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
-              or [] %} {% set k = (states('input_number.dhw_legionella_hours') |
-              float(3) * 4) | int %} {% if merged | length < k or k <= 0 %}
+            start: |
+              {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+              {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+              {% if merged | length < k or k <= 0 %}
                 unknown
               {% else %}
                 {% set ns = namespace(best_sum=9e9, best_i=-1) %}
                 {% for i in range((merged | length) - k + 1) %}
                   {% set sumv = 0.0 %}
-                  {% for j in range(k) %}{% set sumv = sumv +
-              (merged[i+j]['price'] | float) %}{% endfor %}
-                  {% if sumv < ns.best_sum %}{% set ns.best_sum = sumv %}{% set
-              ns.best_i = i %}{% endif %}
+                  {% for j in range(k) %}
+                    {% set sumv = sumv + (merged[i+j]['price'] | float) %}
+                  {% endfor %}
+                  {% if sumv < ns.best_sum %}
+                    {% set ns.best_sum = sumv %}
+                    {% set ns.best_i = i %}
+                  {% endif %}
                 {% endfor %}
-                {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown'
-              }} {% endif %}
-            end: >
-              {% set merged =
-              state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
-              or [] %} {% set k = (states('input_number.dhw_legionella_hours') |
-              float(3) * 4) | int %} {% if merged | length < k or k <= 0 %}
+                {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown' }}
+              {% endif %}
+            end: |
+              {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+              {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+              {% if merged | length < k or k <= 0 %}
                 unknown
               {% else %}
                 {% set ns = namespace(best_sum=9e9, best_i=-1) %}
                 {% for i in range((merged | length) - k + 1) %}
                   {% set sumv = 0.0 %}
-                  {% for j in range(k) %}{% set sumv = sumv +
-              (merged[i+j]['price'] | float) %}{% endfor %}
-                  {% if sumv < ns.best_sum %}{% set ns.best_sum = sumv %}{% set
-              ns.best_i = i %}{% endif %}
+                  {% for j in range(k) %}
+                    {% set sumv = sumv + (merged[i+j]['price'] | float) %}
+                  {% endfor %}
+                  {% if sumv < ns.best_sum %}
+                    {% set ns.best_sum = sumv %}
+                    {% set ns.best_i = i %}
+                  {% endif %}
                 {% endfor %}
-                {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else
-              'unknown' }} {% endif %}
-            avg_price: >
-              {% set merged =
-              state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
-              or [] %} {% set k = (states('input_number.dhw_legionella_hours') |
-              float(3) * 4) | int %} {% if merged | length < k or k <= 0 %}
+                {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else 'unknown' }}
+              {% endif %}
+            avg_price: |
+              {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+              {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+              {% if merged | length < k or k <= 0 %}
                 unknown
               {% else %}
                 {% set ns = namespace(best_sum=9e9, best_i=-1) %}
                 {% for i in range((merged | length) - k + 1) %}
                   {% set sumv = 0.0 %}
-                  {% for j in range(k) %}{% set sumv = sumv +
-              (merged[i+j]['price'] | float) %}{% endfor %}
-                  {% if sumv < ns.best_sum %}{% set ns.best_sum = sumv %}{% set
-              ns.best_i = i %}{% endif %}
+                  {% for j in range(k) %}
+                    {% set sumv = sumv + (merged[i+j]['price'] | float) %}
+                  {% endfor %}
+                  {% if sumv < ns.best_sum %}
+                    {% set ns.best_sum = sumv %}
+                    {% set ns.best_i = i %}
+                  {% endif %}
                 {% endfor %}
                 {% if ns.best_i >= 0 %}
                   {{ (ns.best_sum / k) | round(3) }}
@@ -644,63 +612,17 @@ dhw_control:
         - platform: state
           entity_id: binary_sensor.dhw_should_heat_now
       condition:
-        # Skip if heater is unavailable
         - condition: template
-          value_template:
-            "{{ states('water_heater.cu401b_s_domestic_hot_water') not in
-            ['unavailable','unknown',''] }}"
-        # Do not override while ViCare one-time charge is active
-        - condition: state
-          entity_id: binary_sensor.maalampo_one_time_charge
-          state: 'off'
-      action:
-        - variables:
-            should_heat:
-              "{{ is_state('binary_sensor.dhw_should_heat_now', 'on') }}"
-            current:
-              "{{ state_attr('water_heater.cu401b_s_domestic_hot_water',
-              'temperature') | float(0) }}"
-            target: "{{ states('input_number.dhw_target_temp') | float }}"
-            eco: "{{ states('input_number.dhw_eco_temp') | float }}"
-            tol: 0.4
-        - choose:
-            - conditions: '{{ should_heat }}'
-              sequence:
-                - condition: template
-                  value_template: '{{ (current - target) | abs > tol }}'
-                - service: water_heater.set_temperature
-                  target:
-                    entity_id: water_heater.cu401b_s_domestic_hot_water
-                  data:
-                    temperature: '{{ target | round(0) }}'
-            - conditions: '{{ not should_heat }}'
-              sequence:
-                - condition: template
-                  value_template: '{{ (current - eco) | abs > tol }}'
-                - service: water_heater.set_temperature
-                  target:
-                    entity_id: water_heater.cu401b_s_domestic_hot_water
-                  data:
-                    temperature: '{{ eco | round(0) }}'
-
-    - id: dhw_nightly_cleanup_manual_slots
-      alias: DHW nightly cleanup - reset manual slots if tomorrow is empty
-      mode: single
-      trigger:
-        - platform: time
-          at: '23:59:00'
-      condition:
-        - condition: template
-          value_template: >
+          value_template: |
             {% set tomorrow = [
               states('input_datetime.dhw_manual_tomorrow_start_slot1'),
               states('input_datetime.dhw_manual_tomorrow_end_slot1'),
               states('input_datetime.dhw_manual_tomorrow_start_slot2'),
               states('input_datetime.dhw_manual_tomorrow_end_slot2')
-            ] %} {% set is_empty = tomorrow | select('in',
-            ['unknown','unavailable','']) | list | length == 4 %} {% set
-            is_zero  = tomorrow | select('equalto', '00:00:00') | list | length
-            == 4 %} {{ is_empty or is_zero }}
+            ] %}
+            {% set is_empty = tomorrow | select('in', ['unknown','unavailable','']) | list | length == 4 %}
+            {% set is_zero = tomorrow | select('equalto', '00:00:00') | list | length == 4 %}
+            {{ is_empty or is_zero }}
       action:
         # Reset today's slots to zero
         - service: input_datetime.set_datetime
@@ -728,22 +650,18 @@ dhw_control:
           at: '00:00:00'
       action:
         - variables:
-            tomorrowStartSlot1:
-              "{{ states('input_datetime.dhw_manual_tomorrow_start_slot1') }}"
-            tomorrowEndSlot1:
-              "{{ states('input_datetime.dhw_manual_tomorrow_end_slot1') }}"
-            tomorrowStartSlot2:
-              "{{ states('input_datetime.dhw_manual_tomorrow_start_slot2') }}"
-            tomorrowEndSlot2:
-              "{{ states('input_datetime.dhw_manual_tomorrow_end_slot2') }}"
-            has_slot1: >
+            tomorrowStartSlot1: "{{ states('input_datetime.dhw_manual_tomorrow_start_slot1') }}"
+            tomorrowEndSlot1: "{{ states('input_datetime.dhw_manual_tomorrow_end_slot1') }}"
+            tomorrowStartSlot2: "{{ states('input_datetime.dhw_manual_tomorrow_start_slot2') }}"
+            tomorrowEndSlot2: "{{ states('input_datetime.dhw_manual_tomorrow_end_slot2') }}"
+            has_slot1: |
               {{
                 tomorrowStartSlot1 not in ['unknown','unavailable','']
                 and tomorrowEndSlot1 not in ['unknown','unavailable','']
                 and tomorrowStartSlot1 != '00:00:00'
                 and tomorrowEndSlot1 != '00:00:00'
               }}
-            has_slot2: >
+            has_slot2: |
               {{
                 tomorrowStartSlot2 not in ['unknown','unavailable','']
                 and tomorrowEndSlot2 not in ['unknown','unavailable','']
@@ -847,40 +765,34 @@ dhw_control:
           entity_id: input_boolean.dhw_legionella_enabled
           state: 'on'
         - condition: template
-          value_template: >
-            {% set last_run = states('input_datetime.dhw_legionella_last_run')
-            %} {% if last_run in ['unknown','unavailable',''] %}
+          value_template: |
+            {% set last_run = states('input_datetime.dhw_legionella_last_run') %}
+            {% if last_run in ['unknown','unavailable',''] %}
               true
             {% else %}
               {% set last_run_dt = as_local(as_datetime(last_run)) %}
-              {% set days_since = ((now() - last_run_dt).total_seconds() /
-            86400) | int %}
+              {% set days_since = ((now() - last_run_dt).total_seconds() / 86400) | int %}
               {{ days_since >= 6 }}
             {% endif %}
 
       action:
         - variables:
-            strict_ready:
-              "{{ is_state('sensor.dhw_legionella_cheapest_slot_strict','ready')
-              }}"
-            any_ready:
-              "{{ is_state('sensor.dhw_legionella_cheapest_slot_any','ready') }}"
-            start: >
+            strict_ready: "{{ is_state('sensor.dhw_legionella_cheapest_slot_strict','ready') }}"
+            any_ready: "{{ is_state('sensor.dhw_legionella_cheapest_slot_any','ready') }}"
+            start: |
               {% if strict_ready %}
-                {{
-              state_attr('sensor.dhw_legionella_cheapest_slot_strict','start')
-              }} {% elif any_ready %}
-                {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','start')
-              }} {% else %}
+                {{ state_attr('sensor.dhw_legionella_cheapest_slot_strict','start') }}
+              {% elif any_ready %}
+                {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','start') }}
+              {% else %}
                 unknown
               {% endif %}
-            end: >
+            end: |
               {% if strict_ready %}
-                {{
-              state_attr('sensor.dhw_legionella_cheapest_slot_strict','end') }}
+                {{ state_attr('sensor.dhw_legionella_cheapest_slot_strict','end') }}
               {% elif any_ready %}
-                {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','end')
-              }} {% else %}
+                {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','end') }}
+              {% else %}
                 unknown
               {% endif %}
             temp: "{{ states('input_number.dhw_legionella_temp') | float }}"
@@ -925,10 +837,8 @@ dhw_control:
           state: 'on'
       action:
         - variables:
-            temp_legio:
-              "{{ states('input_number.dhw_legionella_temp') | float }}"
-            hours:
-              "{{ states('input_number.dhw_legionella_hours') | float(3) }}"
+            temp_legio: "{{ states('input_number.dhw_legionella_temp') | float }}"
+            hours: "{{ states('input_number.dhw_legionella_hours') | float(3) }}"
             end_time: '{{ (now() + timedelta(hours=hours)) }}'
         # Optional: cancel Boost to avoid conflicting overrides
         - choose:
