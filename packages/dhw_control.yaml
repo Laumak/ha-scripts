@@ -811,7 +811,7 @@ dhw_control:
     # Phase 7 — DHW Boost: start from button
     # --------------------------------------------------
     - id: dhw_boost_start_from_button
-      alias: DHW Boost — start (button)
+      alias: DHW Boost — start (ViCare one-time charge)
       mode: single
       trigger:
         - platform: event
@@ -819,24 +819,15 @@ dhw_control:
           event_data:
             entity_id: input_button.dhw_boost_start
       action:
-        - variables:
-            minutes: "{{ states('input_number.dhw_boost_minutes') | int(60) }}"
-            hours: '{{ (minutes // 60) | int }}'
-            mins: '{{ (minutes % 60) | int }}'
-        - service: timer.start
+        - service: button.press
           target:
-            entity_id: timer.dhw_boost
-          data:
-            duration:
-              hours: '{{ hours }}'
-              minutes: '{{ mins }}'
-              seconds: 0
+            entity_id: button.cu401b_s_activate_one_time_charge
 
     # --------------------------------------------------
     # Phase 7 — DHW Boost: cancel from button
     # --------------------------------------------------
     - id: dhw_boost_cancel_from_button
-      alias: DHW Boost — cancel (button)
+      alias: DHW Boost — cancel (ViCare one-time charge)
       mode: single
       trigger:
         - platform: event
@@ -844,9 +835,9 @@ dhw_control:
           event_data:
             entity_id: input_button.dhw_boost_cancel
       action:
-        - service: timer.cancel
+        - service: button.press
           target:
-            entity_id: timer.dhw_boost
+            entity_id: button.maalampo_deactivate_one_time_charge
 
     # --------------------------------------------------
     # Phase 7 — OPTIONAL: auto-cancel Boost when target reached
