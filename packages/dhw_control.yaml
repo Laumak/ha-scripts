@@ -839,32 +839,6 @@ dhw_control:
           target:
             entity_id: button.maalampo_deactivate_one_time_charge
 
-    # --------------------------------------------------
-    # Phase 7 — OPTIONAL: auto-cancel Boost when target reached
-    # --------------------------------------------------
-    - id: dhw_boost_auto_cancel_when_target_met
-      alias: DHW Boost — auto-cancel at target temperature
-      mode: restart
-      trigger:
-        - platform: state
-          entity_id: water_heater.cu401b_s_domestic_hot_water
-          attribute: temperature
-      condition:
-        - condition: state
-          entity_id: timer.dhw_boost
-          state: 'active'
-        - condition: template
-          value_template: >-
-            {% set current =
-            state_attr('water_heater.cu401b_s_domestic_hot_water','temperature')
-            | float(0) %} {% set target  =
-            states('input_number.dhw_target_temp') | float(55) %} {% set
-            tol     = 0.4 %} {{ current >= (target - tol) }}
-      action:
-        - service: timer.cancel
-          target:
-            entity_id: timer.dhw_boost
-
     - id: dhw_legionella_cycle
       alias: DHW Legionella Cycle
       mode: single
