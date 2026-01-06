@@ -394,8 +394,7 @@ dhw_control:
                   {% endif %}
                 {% endfor %}
                 {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown'
-              }}
-              {% endif %}
+              }} {% endif %}
             end: >-
               {% set merged =
               state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
@@ -416,8 +415,7 @@ dhw_control:
                   {% endif %}
                 {% endfor %}
                 {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else
-              'unknown' }}
-              {% endif %}
+              'unknown' }} {% endif %}
             sum_price: >-
               {% set merged =
               state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
@@ -464,8 +462,7 @@ dhw_control:
               unknown
             {% else %}
               {{ as_datetime(s) | as_local | string }} → {{ as_datetime(e) |
-            as_local | string }} (avg {{ avg }})
-            {% endif %}
+            as_local | string }} (avg {{ avg }}) {% endif %}
           attributes:
             start:
               "{{ state_attr('sensor.dhw_cheapest_window_detail','start') }}"
@@ -528,8 +525,7 @@ dhw_control:
                 {% endfor %}
                 {% set avg_price = (ns.best_sum / k) | float %}
                 {{ merged[ns.best_i]['start'] if ns.best_i >= 0 and avg_price <=
-              1.0 else 'unknown' }}
-              {% endif %}
+              1.0 else 'unknown' }} {% endif %}
             end: >
               {% set merged =
               state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
@@ -547,8 +543,7 @@ dhw_control:
                 {% endfor %}
                 {% set avg_price = (ns.best_sum / k) | float %}
                 {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 and
-              avg_price <= 1.0 else 'unknown' }}
-              {% endif %}
+              avg_price <= 1.0 else 'unknown' }} {% endif %}
             avg_price: >
               {% set merged =
               state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
@@ -601,8 +596,7 @@ dhw_control:
               ns.best_i = i %}{% endif %}
                 {% endfor %}
                 {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown'
-              }}
-              {% endif %}
+              }} {% endif %}
             end: >
               {% set merged =
               state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
@@ -619,8 +613,7 @@ dhw_control:
               ns.best_i = i %}{% endif %}
                 {% endfor %}
                 {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else
-              'unknown' }}
-              {% endif %}
+              'unknown' }} {% endif %}
             avg_price: >
               {% set merged =
               state_attr('sensor.nordpool_3_day_merged_prices','merged_slots')
@@ -910,11 +903,9 @@ dhw_control:
               {% if strict_ready %}
                 {{
               state_attr('sensor.dhw_legionella_cheapest_slot_strict','start')
-              }}
-              {% elif any_ready %}
+              }} {% elif any_ready %}
                 {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','start')
-              }}
-              {% else %}
+              }} {% else %}
                 unknown
               {% endif %}
             end: >
@@ -923,8 +914,7 @@ dhw_control:
               state_attr('sensor.dhw_legionella_cheapest_slot_strict','end') }}
               {% elif any_ready %}
                 {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','end')
-              }}
-              {% else %}
+              }} {% else %}
                 unknown
               {% endif %}
             temp: "{{ states('input_number.dhw_legionella_temp') | float }}"
