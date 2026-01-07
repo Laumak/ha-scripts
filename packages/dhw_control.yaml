@@ -173,7 +173,6 @@ dhw_control:
   timer:
     dhw_boost:
       name: DHW Boost (override)
-      restore: true
 
   input_button:
     dhw_boost_start:
