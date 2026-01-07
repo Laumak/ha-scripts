@@ -730,9 +730,12 @@ dhw_control:
       mode: single
       trigger:
         - platform: event
-          event_type: input_button_pressed
+          event_type: call_service
           event_data:
-            entity_id: input_button.dhw_boost_start
+            domain: input_button
+            service: press
+            service_data:
+              entity_id: input_button.dhw_boost_start
       action:
         - service: button.press
           target:
@@ -774,9 +777,12 @@ dhw_control:
       mode: single
       trigger:
         - platform: event
-          event_type: input_button_pressed
+          event_type: call_service
           event_data:
-            entity_id: input_button.dhw_boost_cancel
+            domain: input_button
+            service: press
+            service_data:
+              entity_id: input_button.dhw_boost_cancel
       action:
         - service: button.press
           target:
