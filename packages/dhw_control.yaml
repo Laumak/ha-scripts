@@ -776,6 +776,9 @@ dhw_control:
         - service: button.press
           target:
             entity_id: button.maalampo_deactivate_one_time_charge
+        - service: timer.cancel
+          target:
+            entity_id: timer.dhw_boost
 
     - id: dhw_legionella_cycle
       alias: DHW Legionella Cycle
