@@ -614,6 +614,8 @@ dhw_control:
               idle
             {% endif %}
           trigger:
+            - platform: time_pattern
+              seconds: '*'
             - platform: state
               entity_id: timer.dhw_boost
 
