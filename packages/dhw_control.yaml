@@ -191,7 +191,7 @@ dhw_control:
 
     dhw_legionella_cancel:
       name: Legionella — Cancel
-      icon: mdi:stop-circle
+      icon: mdi:stop
 
   ###########################################################################
   # Templates (Phase 1 + Phase 2) — English names → English entity_id slugs
