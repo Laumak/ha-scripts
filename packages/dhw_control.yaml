@@ -756,6 +756,8 @@ dhw_control:
         - service: timer.start
           target:
             entity_id: timer.dhw_boost
+          data:
+            duration: 0
 
     # Stop mirroring timer when ViCare boost turns off
     - id: dhw_boost_timer_mirror_stop
