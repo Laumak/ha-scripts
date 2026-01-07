@@ -740,20 +740,9 @@ dhw_control:
         - service: button.press
           target:
             entity_id: button.cu401b_s_activate_one_time_charge
-
-    # Start mirroring timer when ViCare boost turns on (for UI only)
-    - id: dhw_boost_timer_mirror_start
-      alias: DHW Boost — mirror timer start
-      mode: restart
-      trigger:
-        - platform: state
-          entity_id: binary_sensor.maalampo_one_time_charge
-          to: "on"
-      action:
         - service: timer.start
           target:
             entity_id: timer.dhw_boost
-          # No fixed duration; it will just show "active"
           data: {}
 
     # Stop mirroring timer when ViCare boost turns off
