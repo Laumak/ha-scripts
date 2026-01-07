@@ -613,6 +613,9 @@ dhw_control:
             {% else %}
               idle
             {% endif %}
+          trigger:
+            - platform: state
+              entity_id: timer.dhw_boost
 
   ###########################################################################
   # Phase 3 — Actuator Automation
