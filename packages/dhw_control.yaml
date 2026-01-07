@@ -166,6 +166,11 @@ dhw_control:
       has_date: true
       has_time: true
 
+    dhw_boost_start_time:
+      name: DHW Boost Start Time
+      has_date: true
+      has_time: true
+
   # ---------------------------
   # Phase 7 — BOOST HELPERS
   # ---------------------------
@@ -758,6 +763,11 @@ dhw_control:
         - service: button.press
           target:
             entity_id: button.cu401b_s_activate_one_time_charge
+        - service: input_datetime.set_datetime
+          target:
+            entity_id: input_datetime.dhw_boost_start_time
+          data:
+            datetime: '{{ now() }}'
         - service: timer.start
           target:
             entity_id: timer.dhw_boost
