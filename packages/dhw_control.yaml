@@ -730,7 +730,7 @@ dhw_control:
       mode: single
       trigger:
         - platform: event
-          event_type: homeassistant_button_pressed
+          event_type: input_button_pressed
           event_data:
             entity_id: input_button.dhw_boost_start
       action:
@@ -774,7 +774,7 @@ dhw_control:
       mode: single
       trigger:
         - platform: event
-          event_type: homeassistant_button_pressed
+          event_type: input_button_pressed
           event_data:
             entity_id: input_button.dhw_boost_cancel
       action:
