@@ -173,7 +173,6 @@ dhw_control:
   timer:
     dhw_boost:
       name: DHW Boost (override)
-      duration: '01:00:00' # default; automations can override per start
       restore: true
 
   input_button:
