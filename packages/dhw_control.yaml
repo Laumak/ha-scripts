@@ -599,6 +599,21 @@ dhw_control:
                 {% endif %}
               {% endif %}
 
+        - name: 'DHW Boost Elapsed Time'
+          unique_id: dhw_boost_elapsed_time
+          state: |
+            {% if is_state('binary_sensor.maalampo_one_time_charge','on') %}
+              {% set start_time = state_attr('binary_sensor.maalampo_one_time_charge','last_changed') %}
+              {% if start_time %}
+                {% set elapsed = (now() - as_datetime(start_time)).total_seconds() %}
+                {{ '%02d:%02d:%02d' % (elapsed // 3600, (elapsed % 3600) // 60, elapsed % 60) }}
+              {% else %}
+                unknown
+              {% endif %}
+            {% else %}
+              idle
+            {% endif %}
+
   ###########################################################################
   # Phase 3 — Actuator Automation
   ###########################################################################
