@@ -618,6 +618,15 @@ dhw_control:
 
         - name: 'DHW Heating Decision Code'
           unique_id: dhw_heating_decision_code
+          trigger:
+            - platform: state
+              entity_id: binary_sensor.maalampo_one_time_charge
+            - platform: state
+              entity_id: binary_sensor.dhw_manual_today_active
+            - platform: state
+              entity_id: binary_sensor.dhw_morning_reasonable
+            - platform: state
+              entity_id: binary_sensor.dhw_cheapest_window_active_now
           state: |
             {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
             {% set manual_on = is_state('binary_sensor.dhw_manual_today_active','on') %}
