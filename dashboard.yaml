@@ -1,0 +1,236 @@
+views:
+  - title: DHW
+    type: sections
+    max_columns: 4
+    icon: mdi:water-boiler-auto
+    cards: []
+    sections:
+      - type: grid
+        cards:
+          - type: markdown
+            title: DHW — Overview
+            content: >
+              **Automation enabled:** {{
+              states('input_boolean.dhw_automation_enabled') }}
+
+              **Should heat now:** {{
+              states('binary_sensor.dhw_should_heat_now') }}
+
+              **Reason:** {{
+              state_attr('binary_sensor.dhw_should_heat_now','reason') }}
+
+
+              **Current price:** {{
+              states('sensor.current_electricity_price_in_cents') }} c/kWh
+
+              **Active threshold:** {{
+              states('sensor.dhw_active_threshold_ckwh') }} c/kWh
+
+              **Pricing mode:** {{ states('input_select.dhw_pricing_mode') }}
+          - type: entities
+            title: DHW — Controls & Key Numbers
+            show_header_toggle: false
+            entities:
+              - entity: input_boolean.dhw_automation_enabled
+                name: Automatic control enabled
+              - entity: sensor.current_electricity_price_in_cents
+                name: Current Price
+              - entity: sensor.dhw_active_threshold_ckwh
+                name: Active threshold
+              - entity: input_select.dhw_pricing_mode
+                name: Pricing mode (per day)
+              - entity: input_number.dynamic_threshold_factor
+                name: Dyn threshold
+              - entity: water_heater.cu401b_s_domestic_hot_water
+                name: DHW
+              - entity: input_number.dhw_target_temp
+                name: Target temp
+                icon: mdi:water-thermometer
+              - entity: input_number.dhw_eco_temp
+                icon: mdi:tree
+                name: Eco Temp
+          - type: entities
+            title: DHW — Legionella
+            show_header_toggle: false
+            entities:
+              - entity: input_boolean.dhw_legionella_enabled
+                name: Enabled
+              - entity: input_datetime.dhw_legionella_last_run
+                name: Last run
+              - entity: input_number.dhw_legionella_temp
+                name: Temperature (°C)
+              - entity: input_number.dhw_legionella_hours
+                name: Duration (h)
+              - entity: sensor.dhw_legionella_cheapest_slot_strict
+                name: Strict slot (≤ 1 c/kWh)
+              - entity: sensor.dhw_legionella_cheapest_slot_any
+                name: Fallback slot (any)
+              - entity: input_button.dhw_legionella_run_now
+                name: Run now
+              - entity: input_button.dhw_legionella_cancel
+                name: Cancel Run
+          - type: entities
+            title: DHW — Boost
+            show_header_toggle: false
+            entities:
+              - entity: sensor.dhw_boost_elapsed_time
+                name: Boost (elapsed)
+              - entity: input_button.dhw_boost_start
+                name: Start
+              - entity: input_button.dhw_boost_cancel
+                name: Cancel
+      - type: grid
+        cards:
+          - type: history-graph
+            title: DHW — 24h History (price & decisions)
+            entities:
+              - entity: sensor.current_electricity_price_in_cents
+                name: Price (c/kWh)
+              - entity: sensor.dhw_active_threshold_ckwh
+                name: Active threshold
+              - entity: binary_sensor.dhw_should_heat_now
+                name: Should heat now
+              - entity: binary_sensor.dhw_cheapest_window_active_now
+                name: Cheapest window active
+              - entity: binary_sensor.dhw_morning_reasonable
+                name: Morning reasonable
+            hours_to_show: 24
+          - type: markdown
+            title: DHW — Decision Breakdown (live)
+            content: >
+              **Morning window reasonable:** {{
+              states('binary_sensor.dhw_morning_reasonable') }}
+
+              **Morning details:**
+
+              {% set price_now =
+              states('sensor.current_electricity_price_in_cents') | float(999)
+              %}
+
+              {% set thr       = states('sensor.dhw_active_threshold_ckwh') |
+              float(0) %}
+
+              {% set start     =
+              today_at(states('input_datetime.dhw_morning_start')) %}
+
+              {% set end       =
+              today_at(states('input_datetime.dhw_morning_end')) %}
+
+              {% set within    = (now() >= start and now() < end) %}
+
+              - Window: {{ states('input_datetime.dhw_morning_start') }} → {{
+              states('input_datetime.dhw_morning_end') }}
+
+              - Within window now: {{ within }}
+
+              - Price now: {{ price_now }} c/kWh
+
+              - Threshold: {{ thr }} c/kWh
+
+
+              **Manual today active:** {{
+              states('binary_sensor.dhw_manual_today_active') }}
+
+              - Slot 1: {{ states('input_datetime.dhw_manual_today_start_slot1')
+              }} → {{ states('input_datetime.dhw_manual_today_end_slot1') }}
+
+              - Slot 2: {{ states('input_datetime.dhw_manual_today_start_slot2')
+              }} → {{ states('input_datetime.dhw_manual_today_end_slot2') }}
+
+
+              **Cheapest window active now:** {{
+              states('binary_sensor.dhw_cheapest_window_active_now') }}
+
+              **Cheapest window summary:** {{
+              states('sensor.dhw_cheapest_window_label') }}
+
+              - Start: {{
+              state_attr('sensor.dhw_cheapest_window_detail','start') }}
+
+              - End:   {{ state_attr('sensor.dhw_cheapest_window_detail','end')
+              }}
+
+              - Avg price: {{
+              state_attr('sensor.dhw_cheapest_window_detail','avg_price') }}
+          - type: markdown
+            title: DHW — Upcoming Slots
+            content: >
+              {% set cw_s =
+              state_attr('sensor.dhw_cheapest_window_detail','start') %}
+
+              {% set cw_e =
+              state_attr('sensor.dhw_cheapest_window_detail','end') %}
+
+              {% set cw_avg =
+              state_attr('sensor.dhw_cheapest_window_detail','avg_price') %}
+
+              {% set strict_ready =
+              is_state('sensor.dhw_legionella_cheapest_slot_strict','ready') %}
+
+              {% set any_ready =
+              is_state('sensor.dhw_legionella_cheapest_slot_any','ready') %}
+
+
+              **Cheapest window (next):**
+
+              - {{ cw_s }} → {{ cw_e }} (avg {{ cw_avg }})
+
+
+              **Legionella (next):**
+
+              {% if strict_ready %}
+
+              - STRICT: {{
+              state_attr('sensor.dhw_legionella_cheapest_slot_strict','start')
+              }} → {{
+              state_attr('sensor.dhw_legionella_cheapest_slot_strict','end') }}
+                (avg {{ state_attr('sensor.dhw_legionella_cheapest_slot_strict','avg_price') }} c/kWh)
+              {% elif any_ready %}
+
+              - ANY (fallback): {{
+              state_attr('sensor.dhw_legionella_cheapest_slot_any','start') }} →
+              {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','end') }}
+                (avg {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','avg_price') }} c/kWh)
+              {% else %}
+
+              - No slot data yet
+
+              {% endif %}
+      - type: grid
+        cards:
+          - type: entities
+            title: DHW — Morning Window
+            show_header_toggle: false
+            entities:
+              - entity: input_boolean.dhw_morning_enable
+                name: Morning enabled
+              - entity: input_datetime.dhw_morning_start
+                name: Start
+              - entity: input_datetime.dhw_morning_end
+                name: End
+              - entity: binary_sensor.dhw_morning_reasonable
+                name: Reasonable now?
+          - type: entities
+            title: DHW — Manual Windows
+            show_header_toggle: false
+            entities:
+              - entity: input_boolean.dhw_manual_today_enable
+                name: Manual window today (enabled)
+              - entity: binary_sensor.dhw_manual_today_active
+                name: Manual today active now?
+              - entity: input_datetime.dhw_manual_today_start_slot1
+                name: Today start (Slot 1)
+              - entity: input_datetime.dhw_manual_today_end_slot1
+                name: Today end (Slot 1)
+              - entity: input_datetime.dhw_manual_today_start_slot2
+                name: Today start (Slot 2)
+              - entity: input_datetime.dhw_manual_today_end_slot2
+                name: Today end (Slot 2)
+              - entity: input_datetime.dhw_manual_tomorrow_start_slot1
+                name: Tomorrow start (Slot 1)
+              - entity: input_datetime.dhw_manual_tomorrow_end_slot1
+                name: Tomorrow end (Slot 1)
+              - entity: input_datetime.dhw_manual_tomorrow_start_slot2
+                name: Tomorrow start (Slot 2)
+              - entity: input_datetime.dhw_manual_tomorrow_end_slot2
+                name: Tomorrow end (Slot 2)
