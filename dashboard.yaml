@@ -112,9 +112,10 @@ views:
                 decimals: 0
                 opposite: true
                 show: true
-                labels:
-                  formatter: |
-                    EVAL:v => {const codes = ['OFF', 'MULTI', 'CHEAP', 'MORN', 'MANUAL', 'VICARE']; return codes[Math.round(v)] || 'OFF'}
+                apex_config:
+                  labels:
+                    formatter: |
+                      EVAL:v => {const codes = ['OFF', 'MULTI', 'CHEAP', 'MORN', 'MANUAL', 'VICARE']; return codes[Math.round(v)] || 'OFF'}
             series:
               - entity: sensor.nordpool_3_day_merged_prices
                 yaxis_id: price
