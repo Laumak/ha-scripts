@@ -352,7 +352,6 @@ dhw_control:
             price_now_ckwh: "{{ states('sensor.current_electricity_price_in_cents') | float(999) }}"
             threshold_ckwh: "{{ states('sensor.dhw_active_threshold_ckwh') | float(0) }}"
 
-    - sensor:
         - name: 'DHW cheapest window (detail)'
           unique_id: dhw_cheapest_window_detail
           state: |
@@ -432,7 +431,6 @@ dhw_control:
             length_minutes: "{{ (states('input_number.dhw_cheapest_window_hours') | float(2) * 60) | int }}"
             source: 'sensor.nordpool_3_day_merged_prices.merged_slots'
 
-    - sensor:
         - name: 'DHW cheapest window (label)'
           unique_id: dhw_cheapest_window_label
           state: |
@@ -618,17 +616,11 @@ dhw_control:
 
         - name: 'DHW Heating Decision Code'
           unique_id: dhw_heating_decision_code
-          trigger:
-            - platform: homeassistant
-              event: start
-            - platform: state
-              entity_id: binary_sensor.maalampo_one_time_charge
-            - platform: state
-              entity_id: binary_sensor.dhw_manual_today_active
-            - platform: state
-              entity_id: binary_sensor.dhw_morning_reasonable
-            - platform: state
-              entity_id: binary_sensor.dhw_cheapest_window_active_now
+          entity_id:
+            - binary_sensor.maalampo_one_time_charge
+            - binary_sensor.dhw_manual_today_active
+            - binary_sensor.dhw_morning_reasonable
+            - binary_sensor.dhw_cheapest_window_active_now
           state: |
             {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
             {% set manual_on = is_state('binary_sensor.dhw_manual_today_active','on') %}
@@ -675,6 +667,8 @@ dhw_control:
 
         - name: 'DHW Boost Elapsed Time'
           unique_id: dhw_boost_elapsed_time
+          entity_id:
+            - timer.dhw_boost
           state: |
             {% if is_state('timer.dhw_boost','active') %}
               {% set start_time = state_attr('timer.dhw_boost','last_changed') %}
@@ -687,11 +681,6 @@ dhw_control:
             {% else %}
               idle
             {% endif %}
-          trigger:
-            - platform: time_pattern
-              seconds: '*'
-            - platform: state
-              entity_id: timer.dhw_boost
 
   ###########################################################################
   # Phase 3 — Actuator Automation
