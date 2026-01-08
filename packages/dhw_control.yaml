@@ -619,6 +619,8 @@ dhw_control:
         - name: 'DHW Heating Decision Code'
           unique_id: dhw_heating_decision_code
           trigger:
+            - platform: homeassistant
+              event: start
             - platform: state
               entity_id: binary_sensor.maalampo_one_time_charge
             - platform: state
