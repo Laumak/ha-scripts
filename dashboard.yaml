@@ -81,20 +81,81 @@ views:
                 name: Cancel
       - type: grid
         cards:
-          - type: history-graph
-            title: DHW — 24h History (price & decisions)
-            entities:
-              - entity: sensor.current_electricity_price_in_cents
-                name: Price (c/kWh)
-              - entity: sensor.dhw_active_threshold_ckwh
-                name: Active threshold
-              - entity: binary_sensor.dhw_should_heat_now
-                name: Should heat now
-              - entity: binary_sensor.dhw_cheapest_window_active_now
-                name: Cheapest window active
-              - entity: binary_sensor.dhw_morning_reasonable
-                name: Morning reasonable
-            hours_to_show: 24
+          - type: custom:apexcharts-card
+            header:
+              title: DHW — 3-Day Price History & Forecast
+              show: true
+            graph_span: 72h
+            span:
+              start: day
+            now:
+              show: true
+              label: "Now"
+            apex_config:
+              grid:
+                show: true
+              legend:
+                show: false
+            yaxis:
+              - id: price
+                min: ~0
+                decimals: 2
+                show: false
+                apex_config:
+                  forceNiceScale: true
+                  labels:
+                    formatter: |
+                      EVAL:v => `${v.toFixed(1)} c`
+              - id: decision
+                min: 0
+                max: 5
+                decimals: 0
+                opposite: true
+                show: true
+                labels:
+                  formatter: |
+                    EVAL:v => {const codes = ['OFF', 'MULTI', 'CHEAP', 'MORN', 'MANUAL', 'VICARE']; return codes[Math.round(v)] || 'OFF'}
+            series:
+              - entity: sensor.nordpool_3_day_merged_prices
+                yaxis_id: price
+                name: Electricity Price
+                type: column
+                unit: c
+                opacity: 1
+                color_threshold:
+                  - value: -1
+                    color: "#6EFDEF"
+                  - value: 0
+                    color: "#6EFD99"
+                  - value: 5
+                    color: "#FDE86E"
+                  - value: 10
+                    color: "#FD6E6E"
+                  - value: 20
+                    color: "#BF40BF"
+                data_generator: |
+                  const slots = entity.attributes.merged_slots || [];
+                  return slots.map(slot => [new Date(slot.start).getTime(), slot.price]);
+              - entity: sensor.dhw_heating_decision_code
+                yaxis_id: decision
+                name: Heating Decision
+                type: line
+                stroke_width: 2
+                color_threshold:
+                  - value: -1
+                    color: "#808080"
+                  - value: 0.5
+                    color: "#808080"
+                  - value: 1.5
+                    color: "#A020F0"
+                  - value: 2.5
+                    color: "#00FF00"
+                  - value: 3.5
+                    color: "#FFFF00"
+                  - value: 4.5
+                    color: "#FFA500"
+                  - value: 5
+                    color: "#FF0000"
           - type: markdown
             title: DHW — Decision Breakdown (live)
             content: >

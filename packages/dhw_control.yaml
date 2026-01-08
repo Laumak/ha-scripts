@@ -616,6 +616,52 @@ dhw_control:
                 {% endif %}
               {% endif %}
 
+        - name: 'DHW Heating Decision Code'
+          unique_id: dhw_heating_decision_code
+          state: |
+            {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
+            {% set manual_on = is_state('binary_sensor.dhw_manual_today_active','on') %}
+            {% set morning_ok = is_state('binary_sensor.dhw_morning_reasonable','on') %}
+            {% set cheapest_on = is_state('binary_sensor.dhw_cheapest_window_active_now','on') %}
+            {% set active_count = [vicare_boost, manual_on, morning_ok, cheapest_on] | select('true') | list | length %}
+            {% if vicare_boost %}
+              5
+            {% elif manual_on and active_count > 1 %}
+              1
+            {% elif manual_on %}
+              4
+            {% elif morning_ok and active_count > 1 %}
+              1
+            {% elif morning_ok %}
+              3
+            {% elif cheapest_on and active_count > 1 %}
+              1
+            {% elif cheapest_on %}
+              2
+            {% else %}
+              0
+            {% endif %}
+          attributes:
+            vicare_boost: "{{ is_state('binary_sensor.maalampo_one_time_charge','on') }}"
+            manual_window: "{{ is_state('binary_sensor.dhw_manual_today_active','on') }}"
+            morning_window: "{{ is_state('binary_sensor.dhw_morning_reasonable','on') }}"
+            cheapest_window: "{{ is_state('binary_sensor.dhw_cheapest_window_active_now','on') }}"
+            description: |
+              {% set code = this.state | int(0) %}
+              {% if code == 0 %}
+                OFF
+              {% elif code == 1 %}
+                MULTIPLE ACTIVE
+              {% elif code == 2 %}
+                CHEAPEST WINDOW
+              {% elif code == 3 %}
+                MORNING WINDOW
+              {% elif code == 4 %}
+                MANUAL WINDOW
+              {% elif code == 5 %}
+                VICARE BOOST
+              {% endif %}
+
         - name: 'DHW Boost Elapsed Time'
           unique_id: dhw_boost_elapsed_time
           state: |
