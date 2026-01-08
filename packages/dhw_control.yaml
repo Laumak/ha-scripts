@@ -14,6 +14,15 @@ dhw_control:
       initial: Dynamic + cap
       icon: mdi:currency-eur
 
+    dhw_heating_mode:
+      name: DHW Heating Mode
+      options:
+        - Automatic + Manual
+        - Manual only
+        - "Off"
+      initial: Automatic + Manual
+      icon: mdi:robot
+
   input_number:
     price_cap_cents:
       name: Price cap (c/kWh)
@@ -85,11 +94,6 @@ dhw_control:
   ###########################################################################
 
   input_boolean:
-    dhw_automation_enabled:
-      name: Automatic control enabled
-      icon: mdi:robot
-      initial: true
-
     dhw_morning_enable:
       name: Morning window enabled (05-07)
       icon: mdi:weather-sunset-up
@@ -306,37 +310,45 @@ dhw_control:
         - name: 'DHW should heat now' # -> binary_sensor.dhw_should_heat_now
           unique_id: dhw_should_heat_now
           state: |
-            {% set enabled = is_state('input_boolean.dhw_automation_enabled','on') %}
+            {% set mode = states('input_select.dhw_heating_mode') %}
             {% set manual_on = is_state('binary_sensor.dhw_manual_today_active','on') %}
             {% set morning_ok = is_state('binary_sensor.dhw_morning_reasonable','on') %}
             {% set cheapest_on = is_state('binary_sensor.dhw_cheapest_window_active_now','on') %}
             {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
             {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
             {% set thr = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
-            {{ vicare_boost or (enabled and (manual_on or morning_ok or (cheapest_on and price_now <= thr))) }}
+            {% if mode == 'Automatic + Manual' %}
+              {{ vicare_boost or manual_on or morning_ok or (cheapest_on and price_now <= thr) }}
+            {% elif mode == 'Manual only' %}
+              {{ vicare_boost or manual_on }}
+            {% else %}
+              {{ vicare_boost }}
+            {% endif %}
           attributes:
             reason: |
+              {% set mode = states('input_select.dhw_heating_mode') %}
               {% set manual_on = is_state('binary_sensor.dhw_manual_today_active','on') %}
               {% set morning_ok = is_state('binary_sensor.dhw_morning_reasonable','on') %}
               {% set cheapest_on = is_state('binary_sensor.dhw_cheapest_window_active_now','on') %}
               {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
-              {% set enabled = is_state('input_boolean.dhw_automation_enabled','on') %}
               {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
               {% set thr = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
               {% set r = [] %}
               {% if vicare_boost %}
                 {% set r = r + ['VICARE BOOST'] %}
               {% endif %}
-              {% if enabled and manual_on %}
+              {% if manual_on %}
                 {% set r = r + ['MANUAL'] %}
               {% endif %}
-              {% if enabled and cheapest_on and price_now <= thr %}
-                {% set r = r + ['CHEAPEST WINDOW'] %}
+              {% if mode == 'Automatic + Manual' %}
+                {% if cheapest_on and price_now <= thr %}
+                  {% set r = r + ['CHEAPEST WINDOW'] %}
+                {% endif %}
+                {% if morning_ok %}
+                  {% set r = r + ['MORNING'] %}
+                {% endif %}
               {% endif %}
-              {% if enabled and morning_ok %}
-                {% set r = r + ['MORNING'] %}
-              {% endif %}
-              {{ r | join(' + ') if r else 'NO' }}
+              {{ r | join(' + ') if r else ('OFF (mode: ' ~ mode ~ ')') }}
             price_now_ckwh: "{{ states('sensor.current_electricity_price_in_cents') | float(999) }}"
             threshold_ckwh: "{{ states('sensor.dhw_active_threshold_ckwh') | float(0) }}"
 
