@@ -296,6 +296,25 @@ dhw_control:
               idle
             {% endif %}
 
+        - name: "Nordpool Average Yesterday"
+          unique_id: nordpool_average_yesterday
+          unit_of_measurement: "c/kWh"
+          device_class: monetary
+          state_class: measurement
+          state: >
+            {% set slots = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+            {% set today0 = as_local(today_at('00:00:00')) %}
+            {% set y0 = today0 - timedelta(days=1) %}
+            {% set y1 = today0 - timedelta(milliseconds=1) %}
+            {% set ns = namespace(vals=[]) %}
+            {% for s in slots %}
+              {% set st = as_local(as_datetime(s.start)) %}
+              {% if st >= y0 and st <= y1 %}
+                {% set ns.vals = ns.vals + [ s.price | float(0) ] %}
+              {% endif %}
+            {% endfor %}
+            {{ (ns.vals | sum / (ns.vals | length)) | round(2) if ns.vals | length > 0 else 'unknown' }}
+
     - binary_sensor:
         - name: 'DHW manual today active'
           unique_id: dhw_manual_today_active
