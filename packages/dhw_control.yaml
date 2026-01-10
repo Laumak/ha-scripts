@@ -303,17 +303,19 @@ dhw_control:
             {% if is_state('input_boolean.dhw_manual_today_enable','off') %}
               false
             {% else %}
-              {% set active = false %}
+              {% set ns = namespace(active=false) %}
               {% for slot in [1,2] %}
                 {% set s = states('input_datetime.dhw_manual_today_start_slot' ~ slot) %}
                 {% set e = states('input_datetime.dhw_manual_today_end_slot' ~ slot) %}
                 {% if s not in ['unknown','unavailable',''] and e not in ['unknown','unavailable',''] %}
-                  {% if now() >= today_at(s) and now() < today_at(e) %}
-                    {% set active = true %}
+                  {% set start_dt = as_local(today_at(s)) %}
+                  {% set end_dt = as_local(today_at(e)) %}
+                  {% if now() >= start_dt and now() < end_dt %}
+                    {% set ns.active = true %}
                   {% endif %}
                 {% endif %}
               {% endfor %}
-              {{ active }}
+              {{ ns.active }}
             {% endif %}
 
         - name: 'DHW cheapest window active now'
