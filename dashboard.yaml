@@ -1320,7 +1320,7 @@ views:
             graph_span: 72h
             span:
               start: day
-              offset: '-1d'
+              offset: "-1d"
             now:
               show: true
               label: Now
@@ -1336,18 +1336,27 @@ views:
               tooltip:
                 x:
                   format: dd MMM HH:mm
-                'y':
+                y:
                   formatter: |
-                    EVAL: (value, { seriesIndex }) => {
-                      // seriesIndex: 0=price columns, 1=decision line, 2..=averages
-                      if (seriesIndex === 0) return `${value.toFixed(3)} c/kWh`;
-                      if (seriesIndex === 1) {
+                    EVAL: (value, { seriesIndex, w }) => {
+                      const name = w?.config?.series?.[seriesIndex]?.name || '';
+                      const fmtPrice = v => `${(Number(v) ?? 0).toFixed(3)} c/kWh`;
+
+                      if (name === 'Electricity Price') return fmtPrice(value);
+                      if (name === 'Heating Decision') {
                         const codes = ['OFF','MULTI','CHEAP','MORN','MANUAL','VICARE'];
                         const code = codes[Math.round(value)] || 'OFF';
                         return `Decision: ${code}`;
                       }
-                      return `${value.toFixed(3)} c/kWh`;  // averages
+                      if (name === 'Avg Yesterday' || name === 'Avg Today' || name === 'Avg Tomorrow') {
+                        return fmtPrice(value);
+                      }
+                      if (name === 'Active Threshold (Today)') return `Threshold: ${fmtPrice(value)}`;
+                      // Fallback: treat numeric as price
+                      if (typeof value === 'number') return fmtPrice(value);
+                      return String(value ?? '');
                     }
+
             update_interval: 1min
             experimental:
               color_threshold: true
@@ -1378,20 +1387,18 @@ views:
                 opacity: 1
                 color_threshold:
                   - value: -1
-                    color: '#6EFDEF'
+                    color: "#6EFDEF"
                   - value: 0
-                    color: '#6EFD99'
+                    color: "#6EFD99"
                   - value: 5
-                    color: '#FDE86E'
+                    color: "#FDE86E"
                   - value: 10
-                    color: '#FD6E6E'
+                    color: "#FD6E6E"
                   - value: 20
-                    color: '#BF40BF'
-                data_generator: >
+                    color: "#BF40BF"
+                data_generator: |
                   const slots = entity.attributes.merged_slots || [];
-
-                  return slots.map(slot => [new Date(slot.start).getTime(),
-                  slot.price]);
+                  return slots.map(slot => [new Date(slot.start).getTime(), slot.price]);
               - entity: sensor.dhw_heating_decision_code
                 yaxis_id: decision
                 name: Heating Decision
@@ -1399,25 +1406,25 @@ views:
                 stroke_width: 2
                 color_threshold:
                   - value: -1
-                    color: '#808080'
+                    color: "#808080"
                   - value: 0.5
-                    color: '#808080'
+                    color: "#808080"
                   - value: 1.5
-                    color: '#A020F0'
+                    color: "#A020F0"
                   - value: 2.5
-                    color: '#00FF00'
+                    color: "#00FF00"
                   - value: 3.5
-                    color: '#FFFF00'
+                    color: "#FFFF00"
                   - value: 4.5
-                    color: '#FFA500'
+                    color: "#FFA500"
                   - value: 5
-                    color: '#FF0000'
+                    color: "#FF0000"
               - entity: sensor.nordpool_average_yesterday
                 yaxis_id: price
                 name: Avg Yesterday
                 type: line
                 stroke_width: 2
-                color: '#8888ff'
+                color: "#8888ff"
                 show:
                   legend_value: false
                 data_generator: |
@@ -1449,7 +1456,7 @@ views:
                 name: Avg Today
                 type: line
                 stroke_width: 2
-                color: '#44aa88'
+                color: "#44aa88"
                 show:
                   legend_value: false
                 data_generator: |
@@ -1477,7 +1484,7 @@ views:
                 name: Avg Tomorrow
                 type: line
                 stroke_width: 2
-                color: '#cc8800'
+                color: "#cc8800"
                 show:
                   legend_value: false
                 data_generator: >
@@ -1520,6 +1527,31 @@ views:
                     [d0.getTime(), avg],
                     [d1.getTime(), avg],
                     [gap.getTime(), null],
+                  ];
+              
+              # --- Active threshold (today only) ---
+              - entity: sensor.dhw_active_threshold_ckwh
+                yaxis_id: price
+                name: Active Threshold (Today)
+                type: line
+                stroke_width: 2
+                color: "#9a9a9a"
+                show:
+                  legend_value: false
+                data_generator: |
+                  const thr = parseFloat(entity.state);
+                  if (isNaN(thr)) return [];
+              
+                  const t0 = new Date();
+                  t0.setHours(0,0,0,0);
+                  const t1 = new Date(t0);
+                  t1.setHours(23,59,59,999);
+                  const gap = new Date(t1.getTime() + 1);
+              
+                  return [
+                    [t0.getTime(), thr],
+                    [t1.getTime(), thr],
+                    [gap.getTime(), null],   // stop after today
                   ];
           - type: markdown
             title: DHW — Decision Breakdown (live)
