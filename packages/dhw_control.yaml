@@ -326,7 +326,9 @@ dhw_control:
             {% if s in ['unknown','unavailable',''] or e in ['unknown','unavailable',''] %}
               false
             {% else %}
-              {{ now() >= as_datetime(s) and now() < as_datetime(e) }}
+              {% set start_dt = as_local(as_datetime(s)) %}
+              {% set end_dt = as_local(as_datetime(e)) %}
+              {{ now() >= start_dt and now() < end_dt }}
             {% endif %}
           attributes:
             window_start: "{{ state_attr('sensor.dhw_cheapest_window_detail','start') }}"
@@ -341,8 +343,8 @@ dhw_control:
             {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
             {% set thr = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
             {% set hard_cap = 10.0 %}
-            {% set start = today_at(states('input_datetime.dhw_morning_start')) %}
-            {% set end = today_at(states('input_datetime.dhw_morning_end')) %}
+            {% set start = as_local(today_at(states('input_datetime.dhw_morning_start'))) %}
+            {% set end = as_local(today_at(states('input_datetime.dhw_morning_end'))) %}
             {% set enabled = is_state('input_boolean.dhw_morning_enable','on') %}
             {{ enabled and now() >= start and now() < end and price_now <= thr and price_now <= hard_cap }}
           attributes:
