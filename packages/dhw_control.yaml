@@ -544,6 +544,27 @@ dhw_control:
             avg_price: "{{ state_attr('sensor.dhw_cheapest_window_detail','avg_price') }}"
             source: "{{ state_attr('sensor.dhw_cheapest_window_detail','source') }}"
 
+        - name: 'DHW cheapest window (label tomorrow)'
+          unique_id: dhw_cheapest_window_label_tomorrow
+          availability: >
+            {% set s = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start') %}
+            {% set e = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_end') %}
+            {{ s is string and e is string and s not in ['unknown','unavailable',''] and e not in ['unknown','unavailable',''] }}
+          state: >
+            {% set s = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start') %}
+            {% set e = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_end') %}
+            {% set avg = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_avg_price') %}
+            {% if s in ['unknown','unavailable',''] or e in ['unknown','unavailable',''] or s is not string or e is not string %}
+              unknown
+            {% else %}
+              {{ as_local(as_datetime(s)) | string }} → {{ as_local(as_datetime(e)) | string }} (avg {{ avg }})
+            {% endif %}
+          attributes:
+            start: "{{ state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start') }}"
+            end: "{{ state_attr('sensor.dhw_cheapest_window_detail','tomorrow_end') }}"
+            sum_price: "{{ state_attr('sensor.dhw_cheapest_window_detail','tomorrow_sum_price') }}"
+            avg_price: "{{ state_attr('sensor.dhw_cheapest_window_detail','tomorrow_avg_price') }}"
+
     - binary_sensor:
       - name: 'DHW manual today active'
         unique_id: dhw_manual_today_active
