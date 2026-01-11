@@ -336,71 +336,75 @@ dhw_control:
             start: >
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
-              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-              {% for i in range((merged | length) - k + 1) %}
-                {% set sumv = 0.0 %}
-                {% for j in range(k) %}
-                  {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
+              {% set prices = merged | map(attribute='price') | map('float') | list %}
+              {% if (prices | length) < k or k <= 0 %}
+                unknown
+              {% else %}
+                {% set ns = namespace(best_sum=9e9, best_i=-1) %}
+                {% for i in range((prices | length) - k + 1) %}
+                  {% set sumv = (prices[i:i+k] | sum) %}
+                  {% if sumv < ns.best_sum %}
+                    {% set ns.best_sum = sumv %}
+                    {% set ns.best_i = i %}
+                  {% endif %}
                 {% endfor %}
-                {% if sumv < ns.best_sum %}
-                  {% set ns.best_sum = sumv %}
-                  {% set ns.best_i = i %}
-                {% endif %}
-              {% endfor %}
-              {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown' }}
+                {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown' }}
+              {% endif %}
+
             end: >
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
-              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-              {% for i in range((merged | length) - k + 1) %}
-                {% set sumv = 0.0 %}
-                {% for j in range(k) %}
-                  {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
+              {% set prices = merged | map(attribute='price') | map('float') | list %}
+              {% if (prices | length) < k or k <= 0 %}
+                unknown
+              {% else %}
+                {% set ns = namespace(best_sum=9e9, best_i=-1) %}
+                {% for i in range((prices | length) - k + 1) %}
+                  {% set sumv = (prices[i:i+k] | sum) %}
+                  {% if sumv < ns.best_sum %}
+                    {% set ns.best_sum = sumv %}
+                    {% set ns.best_i = i %}
+                  {% endif %}
                 {% endfor %}
-                {% if sumv < ns.best_sum %}
-                  {% set ns.best_sum = sumv %}
-                  {% set ns.best_i = i %}
-                {% endif %}
-              {% endfor %}
-              {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else 'unknown' }}
+                {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else 'unknown' }}
+              {% endif %}
+
             sum_price: >
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
-              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-              {% for i in range((merged | length) - k + 1) %}
-                {% set sumv = 0.0 %}
-                {% for j in range(k) %}
-                  {% set item = merged[i+j] %}
-                  {% set p = item['price'] if item is mapping else attribute(item,'price') %}
-                  {% set sumv = sumv + (p | float(0)) %}
+              {% set prices = merged | map(attribute='price') | map('float') | list %}
+              {% if (prices | length) < k or k <= 0 %}
+                unknown
+              {% else %}
+                {% set ns = namespace(best_sum=9e9, best_i=-1) %}
+                {% for i in range((prices | length) - k + 1) %}
+                  {% set sumv = (prices[i:i+k] | sum) %}
+                  {% if sumv < ns.best_sum %}
+                    {% set ns.best_sum = sumv %}
+                    {% set ns.best_i = i %}
+                  {% endif %}
                 {% endfor %}
-                {% if sumv < ns.best_sum %}
-                  {% set ns.best_sum = sumv %}
-                  {% set ns.best_i = i %}
-                {% endif %}
-              {% endfor %}
-              {{ ns.best_sum | round(3) if ns.best_i >= 0 else 'unknown' }}
+                {{ ns.best_sum | round(3) }}
+              {% endif %}
+
             avg_price: >
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
-              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-              {% for i in range((merged | length) - k + 1) %}
-                {% set sumv = 0.0 %}
-                {% for j in range(k) %}
-                  {% set item = merged[i+j] %}
-                  {% set p = item['price'] if item is mapping else attribute(item,'price') %}
-                  {% set sumv = sumv + (p | float(0)) %}
-                {% endfor %}
-                {% if sumv < ns.best_sum %}
-                  {% set ns.best_sum = sumv %}
-                  {% set ns.best_i = i %}
-                {% endif %}
-              {% endfor %}
-              {% if ns.best_i >= 0 and k > 0 %}
-                {{ (ns.best_sum / k) | round(3) }}
-              {% else %}
+              {% set prices = merged | map(attribute='price') | map('float') | list %}
+              {% if (prices | length) < k or k <= 0 %}
                 unknown
+              {% else %}
+                {% set ns = namespace(best_sum=9e9, best_i=-1) %}
+                {% for i in range((prices | length) - k + 1) %}
+                  {% set sumv = (prices[i:i+k] | sum) %}
+                  {% if sumv < ns.best_sum %}
+                    {% set ns.best_sum = sumv %}
+                    {% set ns.best_i = i %}
+                  {% endif %}
+                {% endfor %}
+                {{ (ns.best_sum / k) | round(3) }}
               {% endif %}
+
             length_minutes: "{{ (states('input_number.dhw_cheapest_window_hours') | float(2) * 60) | int }}"
             source: 'sensor.nordpool_3_day_merged_prices.merged_slots'
 
