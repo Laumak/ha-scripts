@@ -440,73 +440,65 @@ dhw_control:
 
         - name: 'DHW cheapest window (detail)'
           unique_id: dhw_cheapest_window_detail
-          state: |
+          availability: >
             {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
-            {% set window_hours = states('input_number.dhw_cheapest_window_hours') | float(2) %}
-            {% set slots_needed = (window_hours * 4) | int %}
-            {% if merged | length < slots_needed or slots_needed <= 0 %}
+            {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
+            {{ (merged | length) >= k and k > 0 }}
+          state: >
+            {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+            {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
+            {% if (merged | length) < k or k <= 0 %}
               unknown
             {% else %}
               ready
             {% endif %}
           attributes:
-            start: |
+            start: >
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
-              {% if merged | length < k or k <= 0 %}
-                unknown
-              {% else %}
-                {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-                {% for i in range((merged | length) - k + 1) %}
-                  {% set s = namespace(val=0.0) %}
-                  {% for j in range(k) %}
-                    {% set s.val = s.val + (merged[i+j]['price'] | float) %}
-                  {% endfor %}
-                  {% if s.val < ns.best_sum %}
-                    {% set ns.best_sum = s.val %}
-                    {% set ns.best_i = i %}
-                  {% endif %}
+              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
+              {% for i in range((merged | length) - k + 1) %}
+                {% set sumv = 0.0 %}
+                {% for j in range(k) %}
+                  {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
                 {% endfor %}
-                {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown' }}
-              {% endif %}
-            end: |
+                {% if sumv < ns.best_sum %}
+                  {% set ns.best_sum = sumv %}
+                  {% set ns.best_i = i %}
+                {% endif %}
+              {% endfor %}
+              {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown' }}
+            end: >
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
-              {% if merged | length < k or k <= 0 %}
-                unknown
-              {% else %}
-                {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-                {% for i in range((merged | length) - k + 1) %}
-                  {% set s = namespace(val=0.0) %}
-                  {% for j in range(k) %}
-                    {% set s.val = s.val + (merged[i+j]['price'] | float) %}
-                  {% endfor %}
-                  {% if s.val < ns.best_sum %}
-                    {% set ns.best_sum = s.val %}
-                    {% set ns.best_i = i %}
-                  {% endif %}
+              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
+              {% for i in range((merged | length) - k + 1) %}
+                {% set sumv = 0.0 %}
+                {% for j in range(k) %}
+                  {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
                 {% endfor %}
-                {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else 'unknown' }}
-              {% endif %}
-            sum_price: |
+                {% if sumv < ns.best_sum %}
+                  {% set ns.best_sum = sumv %}
+                  {% set ns.best_i = i %}
+                {% endif %}
+              {% endfor %}
+              {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else 'unknown' }}
+            sum_price: >
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
-              {% if merged | length < k or k <= 0 %}
-                unknown
-              {% else %}
-                {% set ns = namespace(best_sum=9e9) %}
-                {% for i in range((merged | length) - k + 1) %}
-                  {% set s = namespace(val=0.0) %}
-                  {% for j in range(k) %}
-                    {% set s.val = s.val + (merged[i+j]['price'] | float) %}
-                  {% endfor %}
-                  {% if s.val < ns.best_sum %}
-                    {% set ns.best_sum = s.val %}
-                  {% endif %}
+              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
+              {% for i in range((merged | length) - k + 1) %}
+                {% set sumv = 0.0 %}
+                {% for j in range(k) %}
+                  {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
                 {% endfor %}
-                {{ ns.best_sum | round(3) }}
-              {% endif %}
-            avg_price: |
+                {% if sumv < ns.best_sum %}
+                  {% set ns.best_sum = sumv %}
+                  {% set ns.best_i = i %}
+                {% endif %}
+              {% endfor %}
+              {{ ns.best_sum | round(3) if ns.best_i >= 0 else 'unknown' }}
+            avg_price: >
               {% set sumc = this.attributes.sum_price %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
               {% if sumc in ['unknown','unavailable',''] or k <= 0 %}
@@ -707,6 +699,7 @@ dhw_control:
   ###########################################################################
   # Phase 3 — Actuator Automation
   ###########################################################################
+  
   automation:
     - id: dhw_actuator_control
       alias: DHW Actuator Control (NORMAL ↔ ECO)
