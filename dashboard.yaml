@@ -1561,30 +1561,22 @@ views:
               - Threshold: {{ thr }} c/kWh
 
 
-              **Manual today active:** {{
-              states('binary_sensor.dhw_manual_today_active') }}
+              **Manual today active:** {{ states('binary_sensor.dhw_manual_today_active') }}
 
-              - Slot 1: {{ states('input_datetime.dhw_manual_today_start_slot1')
-              }} → {{ states('input_datetime.dhw_manual_today_end_slot1') }}
+              - Slot 1: {{ states('input_datetime.dhw_manual_today_start_slot1') }} → {{ states('input_datetime.dhw_manual_today_end_slot1') }}
 
-              - Slot 2: {{ states('input_datetime.dhw_manual_today_start_slot2')
-              }} → {{ states('input_datetime.dhw_manual_today_end_slot2') }}
+              - Slot 2: {{ states('input_datetime.dhw_manual_today_start_slot2') }} → {{ states('input_datetime.dhw_manual_today_end_slot2') }}
 
 
-              **Cheapest window active now:** {{
-              states('binary_sensor.dhw_cheapest_window_active_now') }}
+              **Cheapest window active now:** {{ states('binary_sensor.dhw_cheapest_window_active_now') }}
 
-              **Cheapest window summary:** {{
-              states('sensor.dhw_cheapest_window_label') }}
+              **Cheapest window summary:** {{ states('sensor.dhw_cheapest_window_label') }}
 
-              - Start: {{
-              state_attr('sensor.dhw_cheapest_window_detail','start') }}
+              - Start: {{ state_attr('sensor.dhw_cheapest_window_detail','start') }}
 
-              - End:   {{ state_attr('sensor.dhw_cheapest_window_detail','end')
-              }}
+              - End: {{ state_attr('sensor.dhw_cheapest_window_detail','end') }}
 
-              - Avg price: {{
-              state_attr('sensor.dhw_cheapest_window_detail','avg_price') }}
+              - Avg price: {{ state_attr('binary_sensor.dhw_cheapest_window_detail','avg_price') }}
           - type: markdown
             title: DHW — Upcoming Slots
             content: >
