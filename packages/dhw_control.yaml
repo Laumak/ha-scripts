@@ -89,6 +89,14 @@ dhw_control:
       unit_of_measurement: 'h'
       initial: 3
 
+    dhw_cheapest_soft_cap:
+      name: Cheapest window soft cap (c/kWh)
+      min: 0
+      max: 30
+      step: 0.5
+      unit_of_measurement: 'c/kWh'
+      initial: 20
+
   ###########################################################################
   # Phase 2 — Decision sensors + helpers (all-English)
   ###########################################################################
@@ -775,8 +783,13 @@ dhw_control:
           {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
           {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
           {% set thr = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
+          {% set soft_cap = states('input_number.dhw_cheapest_soft_cap') | float(20) %}
+
+          {# Cheapest allowed if price <= threshold OR <= soft cap #}
+          {% set cheapest_ok = cheapest_on and (price_now <= thr or price_now <= soft_cap) %}
+
           {% if mode == 'Automatic + Manual' %}
-            {{ vicare_boost or manual_on or morning_ok or (cheapest_on and price_now <= thr) }}
+            {{ vicare_boost or manual_on or morning_ok or cheapest_ok }}
           {% elif mode == 'Manual only' %}
             {{ vicare_boost or manual_on }}
           {% else %}
@@ -791,24 +804,22 @@ dhw_control:
             {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
             {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
             {% set thr = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
-            {% set r = [] %}
-            {% if vicare_boost %}
-              {% set r = r + ['VICARE BOOST'] %}
-            {% endif %}
-            {% if manual_on %}
-              {% set r = r + ['MANUAL'] %}
-            {% endif %}
+            {% set soft_cap = states('input_number.dhw_cheapest_soft_cap') | float(20) %}
+            {% set tags = [] %}
+            {% if vicare_boost %}{% set tags = tags + ['VICARE BOOST'] %}{% endif %}
+            {% if manual_on %}{% set tags = tags + ['MANUAL'] %}{% endif %}
             {% if mode == 'Automatic + Manual' %}
+              {% if morning_ok %}{% set tags = tags + ['MORNING'] %}{% endif %}
               {% if cheapest_on and price_now <= thr %}
-                {% set r = r + ['CHEAPEST WINDOW'] %}
-              {% endif %}
-              {% if morning_ok %}
-                {% set r = r + ['MORNING'] %}
+                {% set tags = tags + ['CHEAPEST (≤ threshold)'] %}
+              {% elif cheapest_on and price_now <= soft_cap %}
+                {% set tags = tags + ['CHEAPEST (≤ soft cap)'] %}
               {% endif %}
             {% endif %}
-            {{ r | join(' + ') if r else ('OFF (mode: ' ~ mode ~ ')') }}
+            {{ tags | join(' + ') if tags else ('OFF (mode: ' ~ mode ~ ')') }}
           price_now_ckwh: "{{ states('sensor.current_electricity_price_in_cents') | float(999) }}"
           threshold_ckwh: "{{ states('sensor.dhw_active_threshold_ckwh') | float(0) }}"
+          soft_cap_ckwh: "{{ states('input_number.dhw_cheapest_soft_cap') | float(20) }}"
 
       - name: 'DHW legionella cheapest slot STRICT'
         unique_id: dhw_legionella_cheapest_slot_strict
