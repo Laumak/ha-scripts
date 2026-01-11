@@ -1580,47 +1580,30 @@ views:
           - type: markdown
             title: DHW — Upcoming Slots
             content: >
-              {% set cw_s =
-              state_attr('sensor.dhw_cheapest_window_detail','start') %}
+              {% set cw_s = state_attr('sensor.dhw_cheapest_window_detail','start') %}
+              {% set cw_e = state_attr('sensor.dhw_cheapest_window_detail','end') %}
+              {% set cw_avg = state_attr('sensor.dhw_cheapest_window_detail','avg_price') %}
+              {% set cw_s_tomorrow = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start') %}
+              {% set cw_e_tomorrow = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_end') %}
+              {% set cw_avg_tomorrow = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_avg_price') %}
+              {% set strict_ready = is_state('sensor.dhw_legionella_cheapest_slot_strict','ready') %}
+              {% set any_ready = is_state('sensor.dhw_legionella_cheapest_slot_any','ready') %}
 
-              {% set cw_e =
-              state_attr('sensor.dhw_cheapest_window_detail','end') %}
-
-              {% set cw_avg =
-              state_attr('sensor.dhw_cheapest_window_detail','avg_price') %}
-
-              {% set strict_ready =
-              is_state('sensor.dhw_legionella_cheapest_slot_strict','ready') %}
-
-              {% set any_ready =
-              is_state('sensor.dhw_legionella_cheapest_slot_any','ready') %}
-
-
-              **Cheapest window (next):**
-
-              - {{ cw_s }} → {{ cw_e }} (avg {{ cw_avg }})
-
+              **Cheapest window:**
+              - Today: {{ cw_s }} → {{ cw_e }} (avg {{ cw_avg }})
+              - Tomorrow: {{ cw_s_tomorrow }} → {{ cw_e_tomorrow }} (avg {{ cw_avg_tomorrow }})
 
               **Legionella (next):**
-
               {% if strict_ready %}
-
-              - STRICT: {{
-              state_attr('sensor.dhw_legionella_cheapest_slot_strict','start')
-              }} → {{
-              state_attr('sensor.dhw_legionella_cheapest_slot_strict','end') }}
+              - STRICT: {{ state_attr('sensor.dhw_legionella_cheapest_slot_strict','start') }} → {{ state_attr('sensor.dhw_legionella_cheapest_slot_strict','end') }}
                 (avg {{ state_attr('sensor.dhw_legionella_cheapest_slot_strict','avg_price') }} c/kWh)
               {% elif any_ready %}
-
-              - ANY (fallback): {{
-              state_attr('sensor.dhw_legionella_cheapest_slot_any','start') }} →
-              {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','end') }}
+              - ANY (fallback): {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','start') }} → {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','end') }}
                 (avg {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','avg_price') }} c/kWh)
               {% else %}
-
               - No slot data yet
-
               {% endif %}
+
   - type: sections
     max_columns: 4
     path: graphs
