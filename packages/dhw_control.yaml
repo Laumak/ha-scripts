@@ -340,12 +340,18 @@ dhw_control:
               {% if (prices | length) < k or k <= 0 %}
                 unknown
               {% else %}
+                {% set now_local = now() %}
+                {% set today0 = as_local(today_at('00:00:00')) %}
+                {% set today1 = today0 + timedelta(days=1) - timedelta(milliseconds=1) %}
                 {% set ns = namespace(best_sum=9e9, best_i=-1) %}
                 {% for i in range((prices | length) - k + 1) %}
-                  {% set sumv = (prices[i:i+k] | sum) %}
-                  {% if sumv < ns.best_sum %}
-                    {% set ns.best_sum = sumv %}
-                    {% set ns.best_i = i %}
+                  {% set end_dt = as_local(as_datetime(merged[i + k - 1]['end'])) %}
+                  {% if end_dt > now_local and end_dt <= today1 %}
+                    {% set sumv = (prices[i:i+k] | sum) %}
+                    {% if sumv < ns.best_sum %}
+                      {% set ns.best_sum = sumv %}
+                      {% set ns.best_i = i %}
+                    {% endif %}
                   {% endif %}
                 {% endfor %}
                 {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown' }}
@@ -358,12 +364,18 @@ dhw_control:
               {% if (prices | length) < k or k <= 0 %}
                 unknown
               {% else %}
+                {% set now_local = now() %}
+                {% set today0 = as_local(today_at('00:00:00')) %}
+                {% set today1 = today0 + timedelta(days=1) - timedelta(milliseconds=1) %}
                 {% set ns = namespace(best_sum=9e9, best_i=-1) %}
                 {% for i in range((prices | length) - k + 1) %}
-                  {% set sumv = (prices[i:i+k] | sum) %}
-                  {% if sumv < ns.best_sum %}
-                    {% set ns.best_sum = sumv %}
-                    {% set ns.best_i = i %}
+                  {% set end_dt = as_local(as_datetime(merged[i + k - 1]['end'])) %}
+                  {% if end_dt > now_local and end_dt <= today1 %}
+                    {% set sumv = (prices[i:i+k] | sum) %}
+                    {% if sumv < ns.best_sum %}
+                      {% set ns.best_sum = sumv %}
+                      {% set ns.best_i = i %}
+                    {% endif %}
                   {% endif %}
                 {% endfor %}
                 {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else 'unknown' }}
@@ -376,15 +388,21 @@ dhw_control:
               {% if (prices | length) < k or k <= 0 %}
                 unknown
               {% else %}
+                {% set now_local = now() %}
+                {% set today0 = as_local(today_at('00:00:00')) %}
+                {% set today1 = today0 + timedelta(days=1) - timedelta(milliseconds=1) %}
                 {% set ns = namespace(best_sum=9e9, best_i=-1) %}
                 {% for i in range((prices | length) - k + 1) %}
-                  {% set sumv = (prices[i:i+k] | sum) %}
-                  {% if sumv < ns.best_sum %}
-                    {% set ns.best_sum = sumv %}
-                    {% set ns.best_i = i %}
+                  {% set end_dt = as_local(as_datetime(merged[i + k - 1]['end'])) %}
+                  {% if end_dt > now_local and end_dt <= today1 %}
+                    {% set sumv = (prices[i:i+k] | sum) %}
+                    {% if sumv < ns.best_sum %}
+                      {% set ns.best_sum = sumv %}
+                      {% set ns.best_i = i %}
+                    {% endif %}
                   {% endif %}
                 {% endfor %}
-                {{ ns.best_sum | round(3) }}
+                {{ ns.best_sum | round(3) if ns.best_i >= 0 else 'unknown' }}
               {% endif %}
 
             avg_price: >
@@ -394,15 +412,21 @@ dhw_control:
               {% if (prices | length) < k or k <= 0 %}
                 unknown
               {% else %}
+                {% set now_local = now() %}
+                {% set today0 = as_local(today_at('00:00:00')) %}
+                {% set today1 = today0 + timedelta(days=1) - timedelta(milliseconds=1) %}
                 {% set ns = namespace(best_sum=9e9, best_i=-1) %}
                 {% for i in range((prices | length) - k + 1) %}
-                  {% set sumv = (prices[i:i+k] | sum) %}
-                  {% if sumv < ns.best_sum %}
-                    {% set ns.best_sum = sumv %}
-                    {% set ns.best_i = i %}
+                  {% set end_dt = as_local(as_datetime(merged[i + k - 1]['end'])) %}
+                  {% if end_dt > now_local and end_dt <= today1 %}
+                    {% set sumv = (prices[i:i+k] | sum) %}
+                    {% if sumv < ns.best_sum %}
+                      {% set ns.best_sum = sumv %}
+                      {% set ns.best_i = i %}
+                    {% endif %}
                   {% endif %}
                 {% endfor %}
-                {{ (ns.best_sum / k) | round(3) }}
+                {{ (ns.best_sum / k) | round(3) if ns.best_i >= 0 and k > 0 else 'unknown' }}
               {% endif %}
 
             length_minutes: "{{ (states('input_number.dhw_cheapest_window_hours') | float(2) * 60) | int }}"
