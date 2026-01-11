@@ -370,7 +370,9 @@ dhw_control:
               {% for i in range((merged | length) - k + 1) %}
                 {% set sumv = 0.0 %}
                 {% for j in range(k) %}
-                  {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
+                  {% set item = merged[i+j] %}
+                  {% set p = item['price'] if item is mapping else attribute(item,'price') %}
+                  {% set sumv = sumv + (p | float(0)) %}
                 {% endfor %}
                 {% if sumv < ns.best_sum %}
                   {% set ns.best_sum = sumv %}
@@ -385,7 +387,9 @@ dhw_control:
               {% for i in range((merged | length) - k + 1) %}
                 {% set sumv = 0.0 %}
                 {% for j in range(k) %}
-                  {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
+                  {% set item = merged[i+j] %}
+                  {% set p = item['price'] if item is mapping else attribute(item,'price') %}
+                  {% set sumv = sumv + (p | float(0)) %}
                 {% endfor %}
                 {% if sumv < ns.best_sum %}
                   {% set ns.best_sum = sumv %}
