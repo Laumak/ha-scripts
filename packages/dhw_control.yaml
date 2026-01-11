@@ -517,28 +517,28 @@ dhw_control:
             length_minutes: "{{ (states('input_number.dhw_cheapest_window_hours') | float(2) * 60) | int }}"
             source: 'sensor.nordpool_3_day_merged_prices.merged_slots'
 
-        - name: 'DHW cheapest window (label)'
-          unique_id: dhw_cheapest_window_label
-          availability: >
-            {% set s = state_attr('sensor.dhw_cheapest_window_detail','start') %}
-            {% set e = state_attr('sensor.dhw_cheapest_window_detail','end') %}
-            {{ s not in [None,'unknown','unavailable',''] and e not in [None,'unknown','unavailable',''] }}
-          state: >
-            {% set s = state_attr('sensor.dhw_cheapest_window_detail','start') %}
-            {% set e = state_attr('sensor.dhw_cheapest_window_detail','end') %}
-            {% set avg = state_attr('sensor.dhw_cheapest_window_detail','avg_price') %}
-            {% if s in ['unknown','unavailable',''] or e in ['unknown','unavailable',''] %}
-              unknown
-            {% else %}
-              {{ as_datetime(s) | as_local | string }} → {{ as_datetime(e) | as_local | string }} (avg {{ avg }})
-            {% endif %}
-          attributes:
-            start: "{{ state_attr('sensor.dhw_cheapest_window_detail','start') }}"
-            end: "{{ state_attr('sensor.dhw_cheapest_window_detail','end') }}"
-            length_minutes: "{{ state_attr('sensor.dhw_cheapest_window_detail','length_minutes') }}"
-            sum_price: "{{ state_attr('sensor.dhw_cheapest_window_detail','sum_price') }}"
-            avg_price: "{{ state_attr('sensor.dhw_cheapest_window_detail','avg_price') }}"
-            source: "{{ state_attr('sensor.dhw_cheapest_window_detail','source') }}"
+      - name: 'DHW cheapest window (label)'
+        unique_id: dhw_cheapest_window_label
+        availability: >
+          {% set s = state_attr('sensor.dhw_cheapest_window_detail','start') %}
+          {% set e = state_attr('sensor.dhw_cheapest_window_detail','end') %}
+          {{ s not in [None,'unknown','unavailable',''] and e not in [None,'unknown','unavailable',''] }}
+        state: >
+          {% set s = state_attr('sensor.dhw_cheapest_window_detail','start') %}
+          {% set e = state_attr('sensor.dhw_cheapest_window_detail','end') %}
+          {% set avg = state_attr('sensor.dhw_cheapest_window_detail','avg_price') %}
+          {% if s in ['unknown','unavailable',''] or e in ['unknown','unavailable',''] %}
+            unknown
+          {% else %}
+            {{ as_datetime(s) | as_local | string }} → {{ as_datetime(e) | as_local | string }} (avg {{ avg }})
+          {% endif %}
+        attributes:
+          start: "{{ state_attr('sensor.dhw_cheapest_window_detail','start') }}"
+          end: "{{ state_attr('sensor.dhw_cheapest_window_detail','end') }}"
+          length_minutes: "{{ state_attr('sensor.dhw_cheapest_window_detail','length_minutes') }}"
+          sum_price: "{{ state_attr('sensor.dhw_cheapest_window_detail','sum_price') }}"
+          avg_price: "{{ state_attr('sensor.dhw_cheapest_window_detail','avg_price') }}"
+          source: "{{ state_attr('sensor.dhw_cheapest_window_detail','source') }}"
 
       - name: 'DHW legionella cheapest slot STRICT'
         unique_id: dhw_legionella_cheapest_slot_strict
