@@ -339,7 +339,11 @@ dhw_control:
 
       - name: 'DHW cheapest window active now'
         unique_id: dhw_cheapest_window_active_now
-        state: |
+        availability: >
+          {% set s = state_attr('sensor.dhw_cheapest_window_detail','start') %}
+          {% set e = state_attr('sensor.dhw_cheapest_window_detail','end') %}
+          {{ s not in [None,'unknown','unavailable',''] and e not in [None,'unknown','unavailable',''] }}
+        state: >
           {% set s = state_attr('sensor.dhw_cheapest_window_detail','start') %}
           {% set e = state_attr('sensor.dhw_cheapest_window_detail','end') %}
           {% if s in ['unknown','unavailable',''] or e in ['unknown','unavailable',''] %}
