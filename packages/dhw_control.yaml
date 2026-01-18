@@ -305,7 +305,7 @@ dhw_control:
           unit_of_measurement: "c/kWh"
           device_class: monetary
           state_class: measurement
-          state: >
+          state: |
             {% set slots = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
             {% set today0 = as_local(today_at('00:00:00')) %}
             {% set y0 = today0 - timedelta(days=1) %}
@@ -324,11 +324,11 @@ dhw_control:
         # ------------------------------
         - name: 'DHW cheapest window (detail)'
           unique_id: dhw_cheapest_window_detail
-          availability: >
+          availability: |
             {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
             {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
             {{ (merged | length) >= k and k > 0 }}
-          state: >
+          state: |
             {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
             {% set k = (states('input_number.dhw_cheapest_window_hours') | float(6) * 4) | int %}
             {% set today0 = as_local(today_at('00:00:00')) %}
@@ -351,7 +351,7 @@ dhw_control:
             # -----------------------------
             # ABSOLUTE TODAY — full day scan (00:00–23:59), pick min-sum window
             # -----------------------------
-            today_absolute_start: >
+            today_absolute_start: |
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(6) * 4) | int %}
               {% set prices = merged | map(attribute='price') | map('float') | list %}
@@ -371,7 +371,7 @@ dhw_control:
               {% endfor %}
               {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown' }}
 
-            today_absolute_end: >
+            today_absolute_end: |
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(6) * 4) | int %}
               {% set prices = merged | map(attribute='price') | map('float') | list %}
@@ -391,7 +391,7 @@ dhw_control:
               {% endfor %}
               {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else 'unknown' }}
 
-            today_absolute_sum_price: >
+            today_absolute_sum_price: |
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(6) * 4) | int %}
               {% set prices = merged | map(attribute='price') | map('float') | list %}
@@ -410,7 +410,7 @@ dhw_control:
               {% endfor %}
               {{ ns.best | round(3) if ns.best < 9e9 else 'unknown' }}
 
-            today_absolute_avg_price: >
+            today_absolute_avg_price: |
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(6) * 4) | int %}
               {% set prices = merged | map(attribute='price') | map('float') | list %}
@@ -430,7 +430,7 @@ dhw_control:
               {{ (ns.best / k) | round(3) if ns.best < 9e9 else 'unknown' }}
 
 
-            start: >
+            start: |
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
               {% set prices = merged | map(attribute='price') | map('float') | list %}
@@ -454,7 +454,7 @@ dhw_control:
                 {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown' }}
               {% endif %}
 
-            end: >
+            end: |
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
               {% set prices = merged | map(attribute='price') | map('float') | list %}
@@ -478,7 +478,7 @@ dhw_control:
                 {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else 'unknown' }}
               {% endif %}
 
-            sum_price: >
+            sum_price: |
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
               {% set prices = merged | map(attribute='price') | map('float') | list %}
@@ -502,7 +502,7 @@ dhw_control:
                 {{ ns.best_sum | round(3) if ns.best_i >= 0 else 'unknown' }}
               {% endif %}
 
-            avg_price: >
+            avg_price: |
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
               {% set prices = merged | map(attribute='price') | map('float') | list %}
@@ -529,7 +529,7 @@ dhw_control:
             # -----------------------------
             # TOMORROW — full day window
             # -----------------------------
-            tomorrow_start: >
+            tomorrow_start: |
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
               {% set prices = merged | map(attribute='price') | map('float') | list %}
@@ -554,7 +554,7 @@ dhw_control:
                 {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'unknown' }}
               {% endif %}
 
-            tomorrow_end: >
+            tomorrow_end: |
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
               {% set prices = merged | map(attribute='price') | map('float') | list %}
@@ -579,7 +579,7 @@ dhw_control:
                 {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else 'unknown' }}
               {% endif %}
 
-            tomorrow_sum_price: >
+            tomorrow_sum_price: |
               {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
               {% set prices = merged | map(attribute='price') | map('float') | list %}
@@ -603,7 +603,7 @@ dhw_control:
                 {{ ns.best_sum | round(3) if ns.best_sum < 9e9 else 'unknown' }}
               {% endif %}
 
-            tomorrow_avg_price: >
+            tomorrow_avg_price: |
               {% set k = (states('input_number.dhw_cheapest_window_hours') | float(2) * 4) | int %}
               {% set sumc = this.attributes.tomorrow_sum_price %}
               {% if sumc in ['unknown','unavailable',''] or k <= 0 %}
@@ -620,11 +620,11 @@ dhw_control:
         # ------------------------------
         - name: 'DHW absolute cheapest window (label)'
           unique_id: dhw_absolute_cheapest_window_label
-          availability: >
+          availability: |
             {% set s = state_attr('sensor.dhw_cheapest_window_detail','today_absolute_start') %}
             {% set e = state_attr('sensor.dhw_cheapest_window_detail','today_absolute_end') %}
             {{ s is string and e is string and s not in ['unknown','unavailable',''] and e not in ['unknown','unavailable',''] }}
-          state: >
+          state: |
             {% set s = state_attr('sensor.dhw_cheapest_window_detail','today_absolute_start') %}
             {% set e = state_attr('sensor.dhw_cheapest_window_detail','today_absolute_end') %}
             {% set avg = state_attr('sensor.dhw_cheapest_window_detail','today_absolute_avg_price') %}
@@ -642,11 +642,11 @@ dhw_control:
 
         - name: 'DHW cheapest window (label)'
           unique_id: dhw_cheapest_window_label
-          availability: >
+          availability: |
             {% set s = state_attr('sensor.dhw_cheapest_window_detail','start') %}
             {% set e = state_attr('sensor.dhw_cheapest_window_detail','end') %}
             {{ s is string and e is string and s not in ['unknown','unavailable',''] and e not in ['unknown','unavailable',''] }}
-          state: >
+          state: |
             {% set s = state_attr('sensor.dhw_cheapest_window_detail','start') %}
             {% set e = state_attr('sensor.dhw_cheapest_window_detail','end') %}
             {% set avg = state_attr('sensor.dhw_cheapest_window_detail','avg_price') %}
@@ -665,11 +665,11 @@ dhw_control:
 
         - name: 'DHW cheapest window (label tomorrow)'
           unique_id: dhw_cheapest_window_label_tomorrow
-          availability: >
+          availability: |
             {% set s = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start') %}
             {% set e = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_end') %}
             {{ s is string and e is string and s not in ['unknown','unavailable',''] and e not in ['unknown','unavailable',''] }}
-          state: >
+          state: |
             {% set s = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start') %}
             {% set e = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_end') %}
             {% set avg = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_avg_price') %}
@@ -711,11 +711,11 @@ dhw_control:
       # ------------------------------
       - name: 'DHW cheapest window active now'
         unique_id: dhw_cheapest_window_active_now
-        availability: >
+        availability: |
           {% set s = state_attr('sensor.dhw_cheapest_window_detail','today_absolute_start') %}
           {% set e = state_attr('sensor.dhw_cheapest_window_detail','today_absolute_end') %}
           {{ s is string and e is string and s not in ['unknown','unavailable',''] and e not in ['unknown','unavailable',''] }}
-        state: >
+        state: |
           {% set s = state_attr('sensor.dhw_cheapest_window_detail','today_absolute_start') %}
           {% set e = state_attr('sensor.dhw_cheapest_window_detail','today_absolute_end') %}
           {% if s in ['unknown','unavailable',''] or e in ['unknown','unavailable',''] or s is not string or e is not string %}
