@@ -52,9 +52,22 @@ views:
             detail: 2
             name: Sähkönkulutus
             grid_options:
-              columns: 12
+              columns: 6
               rows: 2
             hours_to_show: 1
+          - type: tile
+            entity: binary_sensor.dhw_should_heat_now
+            name: Should Heat
+            icon: mdi:thermometer-water
+            color: red
+            state_content: reason
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: climate.cu401b_s_heating
+            name: MLP Heating
+            vertical: false
+            features_position: bottom
       - type: grid
         cards:
           - type: custom:expander-card
@@ -213,7 +226,7 @@ views:
             overlay-margin: 20px
             child-margin-top: 10px
           - type: custom:expander-card
-            title: Makkarit
+            title: Makkari
             cards:
               - type: horizontal-stack
                 cards:
@@ -725,6 +738,7 @@ views:
                 name: KA Huomenna
               - entity: input_number.korkein_sallittu_sahkon_hinta
                 secondary_info: none
+              - entity: sensor.energy_import_daily
       - type: grid
         cards:
           - type: history-graph
@@ -843,7 +857,7 @@ views:
                     entries:
                       - type: input
                         entity_id: input_datetime.shellyt_paalle
-                        icon: mdi:clock-check
+                        icon: mdi:clock-plus
                         tap_action:
                           action: perform-action
                           perform_action: input_datetime.set_datetime
@@ -857,6 +871,23 @@ views:
                           - '00:00:00'
                           - '23:59:59'
                         haptics: true
+                  - type: custom:service-call
+                    entries:
+                      - type: input
+                        entity_id: input_datetime.shellyt_paalle_2
+                        icon: mdi:clock-plus
+                        tap_action:
+                          action: perform-action
+                          perform_action: input_datetime.set_datetime
+                          data:
+                            time: '{{ value }}'
+                          target:
+                            entity_id: input_datetime.shellyt_paalle_2
+                        thumb: time
+                        step: 300
+                        range:
+                          - '00:00:00'
+                          - '23:59:59'
                 features_position: bottom
               - type: tile
                 entity: input_datetime.shellyt_pois
@@ -867,7 +898,7 @@ views:
                     entries:
                       - type: input
                         entity_id: input_datetime.shellyt_pois
-                        icon: mdi:clock-remove
+                        icon: mdi:clock-minus-outline
                         tap_action:
                           action: perform-action
                           perform_action: input_datetime.set_datetime
@@ -877,6 +908,24 @@ views:
                             entity_id: input_datetime.shellyt_pois
                         thumb: time
                         step: 60
+                        range:
+                          - '00:00:00'
+                          - '23:59:59'
+                        haptics: true
+                  - type: custom:service-call
+                    entries:
+                      - type: input
+                        entity_id: input_datetime.shellyt_pois_2
+                        icon: mdi:clock-minus-outline
+                        tap_action:
+                          action: perform-action
+                          perform_action: input_datetime.set_datetime
+                          data:
+                            time: '{{ value }}'
+                          target:
+                            entity_id: input_datetime.shellyt_pois_2
+                        thumb: time
+                        step: 300
                         range:
                           - '00:00:00'
                           - '23:59:59'
@@ -1063,6 +1112,317 @@ views:
             grid_options:
               columns: 12
               rows: 2
+          - type: markdown
+            title: Päivittäiset hinnat
+            entity_id:
+              - sensor.nordpool_predict_fi_daily_average_price
+            content: >-
+              {% set days =
+              state_attr('sensor.nordpool_predict_fi_daily_average_price',
+              'daily_averages') or [] %}
+
+              {% if days %}
+
+              {% set weekdays = ['ma', 'ti', 'ke', 'to', 'pe', 'la', 'su'] -%}
+
+              | Päivä | Keskihinta<br>¢/kWh | Min<br>¢/kWh | Max<br>¢/kWh |
+
+              | :---: | :---: | :---: | :---: |
+
+              {% for day in days -%}
+
+              {% set day_obj = day.date | as_datetime -%}
+
+              {% set weekday = weekdays[day_obj.weekday()] -%}
+
+              {% set values = day.points | map(attribute='value') | list -%}
+
+              {% set min_value = values | min if values else None -%}
+
+              {% set max_value = values | max if values else None -%}
+
+              | {{ weekday }} {{ day_obj.strftime('%d.%m') }} | {{ '%.1f' |
+              format(day.average) }} | {{ '%.1f' | format(min_value) if
+              min_value is not none else '—' }} | {{ '%.1f' | format(max_value)
+              if max_value is not none else '—' }} |
+
+              {% endfor %}
+
+              {% else %}
+
+              Ei päivittäisiä hintatietoja saatavilla.
+
+              {% endif %}
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: Sähkön hinta ja tuulivoima
+              show_states: true
+              colorize_states: true
+              standard_format: true
+              disable_actions: true
+            graph_span: 7d
+            experimental:
+              color_threshold: true
+            apex_config:
+              chart:
+                height: 256
+                toolbar:
+                  show: false
+              grid:
+                strokeDashArray: 3
+              legend:
+                show: false
+                customLegendItems:
+                  - Sähkön hinta (¢/kWh)
+                  - Tuulivoima (GW)
+              xaxis:
+                type: datetime
+                tickAmount: 7
+                tickPlacement: 'on'
+                labels:
+                  hideOverlappingLabels: false
+                  formatter: |
+                    EVAL:function (value, timestamp) {
+                      const ts = timestamp || value;
+                      const date = new Date(ts);
+                      if (Number.isNaN(date.getTime())) return value;
+                      const days = ['su', 'ma', 'ti', 'ke', 'to', 'pe', 'la'];
+                      return days[date.getDay()];
+                    }
+              tooltip:
+                enabled: false
+              markers:
+                size: 0
+            span:
+              start: day
+            now:
+              show: true
+              label: Nyt
+            series:
+              - entity: sensor.nordpool_predict_fi_price
+                name: Sähkön hinta
+                type: line
+                yaxis_id: price
+                extend_to: now
+                curve: stepline
+                stroke_width: 1.5
+                float_precision: 2
+                color: limegreen
+                opacity: 1
+                color_threshold:
+                  - value: 3
+                    color: lime
+                    opacity: 1
+                  - value: 6
+                    color: limegreen
+                    opacity: 1
+                  - value: 10
+                    color: gold
+                    opacity: 1
+                  - value: 15
+                    color: darkorange
+                    opacity: 1
+                  - value: 20
+                    color: red
+                    opacity: 1
+                  - value: 30
+                    color: darkred
+                    opacity: 1
+                data_generator: |
+                  const data = entity.attributes.forecast || [];
+                  return data.map((item) => [item.timestamp, item.value]);
+                show:
+                  in_chart: true
+                  in_header: false
+                  in_legend: true
+                  legend_value: false
+              - entity: sensor.nordpool_predict_fi_price
+                type: area
+                yaxis_id: price
+                extend_to: now
+                curve: stepline
+                stroke_width: 0
+                float_precision: 1
+                color: limegreen
+                opacity: 0.16
+                data_generator: |
+                  const data = entity.attributes.forecast || [];
+                  return data.map((item) => [item.timestamp, item.value]);
+                show:
+                  in_chart: true
+                  in_header: false
+                  in_legend: false
+                  legend_value: false
+              - entity: sensor.nordpool_predict_fi_price
+                name: Ennuste
+                type: line
+                yaxis_id: price
+                curve: straight
+                stroke_width: 1
+                stroke_dash: 3
+                color: red
+                opacity: 1
+                extend_to: false
+                data_generator: >
+                  const fs =
+                  hass.states['sensor.nordpool_predict_fi_price']?.attributes?.forecast_start;
+
+                  const x = fs ? Date.parse(fs) : NaN;
+
+                  if (!Number.isFinite(x)) return [];
+
+                  const data = entity.attributes.forecast || [];
+
+                  let min = Infinity, max = -Infinity;
+
+                  for (const i of data) {
+                    const v = Number(i.value);
+                    if (Number.isFinite(v)) { if (v < min) min = v; if (v > max) max = v; }
+                  }
+
+                  if (!Number.isFinite(min) || !Number.isFinite(max)) { min = 0;
+                  max = 1; }
+
+                  // Add a null point at x+1 ms to stop the path from continuing
+                  horizontally.
+
+                  return [[x, min], [x, max], [x + 1, null]];
+                show:
+                  in_chart: true
+                  in_header: false
+                  in_legend: false
+                  legend_value: false
+              - entity: sensor.nordpool_predict_fi_windpower
+                name: Tuulivoima
+                type: column
+                yaxis_id: wind
+                float_precision: 0
+                color: skyblue
+                opacity: 0.2
+                extend_to: now
+                stroke_width: 0
+                curve: stepline
+                data_generator: >
+                  const data = entity.attributes.windpower_forecast || [];
+
+                  return data.map((item) => [item.timestamp, item.value /
+                  1000]);
+                show:
+                  in_chart: true
+                  in_header: false
+                  in_legend: true
+                  legend_value: false
+              - entity: sensor.nordpool_predict_fi_price_now
+                name: Hinta nyt
+                unit: ¢
+                float_precision: 1
+                color: dimgray
+                show:
+                  in_chart: false
+                  legend_value: false
+                  in_header: raw
+                  header_color_threshold: true
+                color_threshold:
+                  - value: 3
+                    color: lime
+                    opacity: 1
+                  - value: 6
+                    color: limegreen
+                    opacity: 1
+                  - value: 10
+                    color: gold
+                    opacity: 1
+                  - value: 15
+                    color: darkorange
+                    opacity: 1
+                  - value: 20
+                    color: red
+                    opacity: 1
+                  - value: 30
+                    color: darkred
+                    opacity: 1
+              - entity: sensor.nordpool_predict_fi_price_next_6h
+                name: Seuraavat 6h
+                unit: ¢
+                float_precision: 1
+                color: dimgray
+                color_threshold:
+                  - value: 3
+                    color: lime
+                    opacity: 1
+                  - value: 6
+                    color: limegreen
+                    opacity: 1
+                  - value: 10
+                    color: gold
+                    opacity: 1
+                  - value: 15
+                    color: darkorange
+                    opacity: 1
+                  - value: 20
+                    color: red
+                    opacity: 1
+                  - value: 30
+                    color: darkred
+                    opacity: 1
+                show:
+                  in_chart: false
+                  legend_value: false
+                  header_color_threshold: true
+              - entity: sensor.nordpool_predict_fi_cheapest_6h_price_window
+                name: Halvin 6h
+                unit: ¢
+                float_precision: 1
+                color: dimgray
+                color_threshold:
+                  - value: 3
+                    color: lime
+                    opacity: 1
+                  - value: 6
+                    color: limegreen
+                    opacity: 1
+                  - value: 10
+                    color: gold
+                    opacity: 1
+                  - value: 15
+                    color: darkorange
+                    opacity: 1
+                  - value: 20
+                    color: red
+                    opacity: 1
+                  - value: 30
+                    color: darkred
+                    opacity: 1
+                show:
+                  in_chart: false
+                  legend_value: false
+                  header_color_threshold: true
+              - entity: sensor.nordpool_predict_fi_windpower_now
+                name: Tuulivoima
+                float_precision: 0
+                color: skyblue
+                show:
+                  in_chart: false
+                  in_header: true
+                  in_legend: true
+                  legend_value: false
+            yaxis:
+              - id: price
+                decimals: 0
+                apex_config:
+                  tickAmount: 4
+                  forceNiceScale: true
+                  title:
+                    text: Hinta (¢/kWh)
+              - id: wind
+                opposite: true
+                decimals: 0
+                apex_config:
+                  tickAmount: 4
+                  forceNiceScale: true
+                  title:
+                    text: Tuulivoima (GW)
     cards: []
     icon: mdi:lightning-bolt
   - type: sections
@@ -1082,23 +1442,6 @@ views:
               yellow: 30
               red: 40
             max: 70
-          - type: history-graph
-            entities:
-              - entity: sensor.cu401b_s_dhw_storage_temperature
-            title: Veden lämpötila 4h
-            hours_to_show: 4
-          - chart_type: line
-            period: 5minute
-            type: statistics-graph
-            entities:
-              - sensor.cu401b_s_dhw_storage_temperature
-            stat_types:
-              - mean
-            days_to_show: 1
-            hide_legend: true
-            title: Veden lämpötila 24h
-      - type: grid
-        cards:
           - type: tile
             entity: climate.cu401b_s_heating
             name: Heating
@@ -1152,28 +1495,43 @@ views:
             icon: mdi:heating-coil
             vertical: true
             features_position: bottom
-          - type: history-graph
-            entities:
-              - entity: sensor.cu401b_s_compressor_phase
-                name: Kompressori
-            hours_to_show: 24
-            logarithmic_scale: false
-          - type: history-graph
-            entities:
-              - entity: binary_sensor.cu401b_s_dhw_charging
-                name: Vastus
-            hours_to_show: 24
-          - type: history-graph
-            entities:
-              - entity: binary_sensor.cu401b_s_dhw_circulation_pump
-                name: Pumppu
       - type: grid
         cards:
           - type: history-graph
             entities:
+              - entity: sensor.cu401b_s_dhw_storage_temperature
+            title: Veden lämpötila 4h
+            hours_to_show: 4
+          - chart_type: line
+            period: 5minute
+            type: statistics-graph
+            entities:
+              - sensor.cu401b_s_dhw_storage_temperature
+            stat_types:
+              - mean
+            days_to_show: 1
+            hide_legend: true
+            title: Veden lämpötila 24h
+          - type: history-graph
+            entities:
+              - entity: binary_sensor.cu401b_s_compressor
+                name: Kompura
+              - entity: binary_sensor.cu401b_s_dhw_charging
+                name: Vastus
+            hours_to_show: 12
+            logarithmic_scale: false
+          - type: history-graph
+            entities:
               - entity: sensor.cu401b_s_primary_circuit_return_temperature
+                name: Tulo
               - entity: sensor.cu401b_s_primary_circuit_supply_temperature
+                name: Meno
               - entity: sensor.cu401b_s_return_temperature
+                name: Return
+              - entity: sensor.p1_meter_power
+            hours_to_show: 12
+      - type: grid
+        cards:
           - type: logbook
             hours_to_show: 24
             target:
@@ -1181,6 +1539,8 @@ views:
                 - climate.cu401b_s_heating
                 - water_heater.cu401b_s_domestic_hot_water
                 - binary_sensor.cu401b_s_dhw_charging
+                - binary_sensor.cu401b_s_compressor
+                - number.cu401b_s_dhw_temperature
     cards: []
   - title: DHW
     type: sections
@@ -1215,14 +1575,12 @@ views:
             entities:
               - entity: input_select.dhw_heating_mode
                 name: Heating Mode
-              - entity: automation.dhw_auto_temperature_control_cheap_hours_eco
-                name: DHW Auto temp
+              - entity: input_select.dhw_pricing_mode
+                name: Pricing mode (per day)
               - entity: sensor.current_electricity_price_in_cents
                 name: Current Price
               - entity: sensor.dhw_active_threshold_ckwh
                 name: Active threshold
-              - entity: input_select.dhw_pricing_mode
-                name: Pricing mode (per day)
               - entity: input_number.dynamic_threshold_factor
                 name: Dyn threshold
               - entity: water_heater.cu401b_s_domestic_hot_water
@@ -1233,36 +1591,50 @@ views:
               - entity: input_number.dhw_eco_temp
                 icon: mdi:tree
                 name: Eco Temp
-          - type: entities
-            title: DHW — Legionella
-            show_header_toggle: false
-            entities:
-              - entity: input_boolean.dhw_legionella_enabled
-                name: Enabled
-              - entity: input_datetime.dhw_legionella_last_run
-                name: Last run
-              - entity: input_number.dhw_legionella_temp
-                name: Temperature (°C)
-              - entity: input_number.dhw_legionella_hours
-                name: Duration (h)
-              - entity: sensor.dhw_legionella_cheapest_slot_strict
-                name: Strict slot (≤ 1 c/kWh)
-              - entity: sensor.dhw_legionella_cheapest_slot_any
-                name: Fallback slot (any)
-              - entity: input_button.dhw_legionella_run_now
-                name: Run now
-              - entity: input_button.dhw_legionella_cancel
-                name: Cancel Run
-          - type: entities
-            title: DHW — Boost
-            show_header_toggle: false
-            entities:
-              - entity: sensor.dhw_boost_elapsed_time
-                name: Boost (elapsed)
-              - entity: input_button.dhw_boost_start
-                name: Start
-              - entity: input_button.dhw_boost_cancel
-                name: Cancel
+              - entity: input_number.dhw_cheapest_window_hours
+                name: Cheapest Win Length
+                secondary_info: last-changed
+                icon: mdi:clock-edit-outline
+              - entity: input_number.dhw_cheapest_soft_cap
+                name: Soft Cap
+                secondary_info: last-changed
+                icon: mdi:currency-eur
+          - type: custom:expander-card
+            cards:
+              - type: entities
+                show_header_toggle: false
+                entities:
+                  - entity: sensor.dhw_boost_elapsed_time
+                    name: Boost (elapsed)
+                  - entity: input_button.dhw_boost_start
+                    name: Start
+                  - entity: input_button.dhw_boost_cancel
+                    name: Cancel
+                  - entity: binary_sensor.maalampo_one_time_charge
+                    name: DHW OTC
+            title: DHW Boost
+          - type: custom:expander-card
+            title: DHW Legionella prevention
+            cards:
+              - type: entities
+                show_header_toggle: false
+                entities:
+                  - entity: input_boolean.dhw_legionella_enabled
+                    name: Enabled
+                  - entity: input_datetime.dhw_legionella_last_run
+                    name: Last run
+                  - entity: input_number.dhw_legionella_temp
+                    name: Temperature (°C)
+                  - entity: input_number.dhw_legionella_hours
+                    name: Duration (h)
+                  - entity: sensor.dhw_legionella_cheapest_slot_strict
+                    name: Strict slot (≤ 1 c/kWh)
+                  - entity: sensor.dhw_legionella_cheapest_slot_any
+                    name: Fallback slot (any)
+                  - entity: input_button.dhw_legionella_run_now
+                    name: Run now
+                  - entity: input_button.dhw_legionella_cancel
+                    name: Cancel Run
       - type: grid
         cards:
           - type: entities
@@ -1279,14 +1651,203 @@ views:
                 name: Today start (Slot 2)
               - entity: input_datetime.dhw_manual_today_end_slot2
                 name: Today end (Slot 2)
-              - entity: input_datetime.dhw_manual_tomorrow_start_slot1
-                name: Tomorrow start (Slot 1)
-              - entity: input_datetime.dhw_manual_tomorrow_end_slot1
-                name: Tomorrow end (Slot 1)
-              - entity: input_datetime.dhw_manual_tomorrow_start_slot2
-                name: Tomorrow start (Slot 2)
-              - entity: input_datetime.dhw_manual_tomorrow_end_slot2
-                name: Tomorrow end (Slot 2)
+          - type: custom:expander-card
+            title: Tomorrow manual heating
+            cards:
+              - type: entities
+                show_header_toggle: false
+                entities:
+                  - entity: input_datetime.dhw_manual_tomorrow_start_slot1
+                    name: Start 1
+                  - entity: input_datetime.dhw_manual_tomorrow_end_slot1
+                    name: End 1
+                  - entity: input_datetime.dhw_manual_tomorrow_start_slot2
+                    name: Start 2
+                  - entity: input_datetime.dhw_manual_tomorrow_end_slot2
+                    name: End 2
+          - type: custom:expander-card
+            title: 🔥 DHW — Heating Decisions
+            cards:
+              - type: markdown
+                content: >
+                  ## **Price Conditions**
+
+                  - **Current price:** `{{
+                  states('sensor.current_electricity_price_in_cents') }} c/kWh`
+
+                  - **Dynamic threshold:** `{{
+                  states('sensor.dhw_active_threshold_ckwh') }} c/kWh`
+
+                  - **Soft cap (cheapest-window max):** `{{
+                  states('input_number.dhw_cheapest_soft_cap') }} c/kWh`
+
+
+                  **Passes threshold?**  
+
+                  → `{{ (states('sensor.current_electricity_price_in_cents') |
+                  float(999)) 
+                        <= (states('sensor.dhw_active_threshold_ckwh') | float(0)) }}`
+
+                  **Passes soft cap?**  
+
+                  → `{{ (states('sensor.current_electricity_price_in_cents') |
+                  float(999)) 
+                        <= (states('input_number.dhw_cheapest_soft_cap') | float(20)) }}`
+
+                  ---
+
+
+                  ## Cheapest Window Today
+
+                  - **Start:** `{{
+                  state_attr('sensor.dhw_cheapest_window_detail','today_absolute_start')
+                  }}`
+
+                  - **End:** `{{
+                  state_attr('sensor.dhw_cheapest_window_detail','today_absolute_end')
+                  }}`
+
+                  - **Average price:** `{{
+                  state_attr('sensor.dhw_cheapest_window_detail','today_absolute_avg_price')
+                  }} c/kWh`
+
+
+                  **Cheapest (absolute) active now?**  
+
+                  → `{{ states('binary_sensor.dhw_cheapest_window_active_now')
+                  }}`
+
+
+                  ---
+
+
+                  ## Cheapest Window Tomorrow
+
+                  - **Start:** `{{
+                  state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start')
+                  }}`
+
+                  - **End:** `{{
+                  state_attr('sensor.dhw_cheapest_window_detail','tomorrow_end')
+                  }}`
+
+                  - **Average price:** `{{
+                  state_attr('sensor.dhw_cheapest_window_detail','tomorrow_avg_price')
+                  }} c/kWh` 
+
+
+                  ---
+
+
+                  ## **Next Heating Window (Scheduled)**
+
+                  {# Prefer today's actionable window (ends > now). Otherwise
+                  show tomorrow. #}
+
+                  {% set s_act =
+                  state_attr('sensor.dhw_cheapest_window_detail','start') %}
+
+                  {% set e_act =
+                  state_attr('sensor.dhw_cheapest_window_detail','end') %}
+
+                  {% set avg_act =
+                  state_attr('sensor.dhw_cheapest_window_detail','avg_price') %}
+
+                  {% set s_tom =
+                  state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start')
+                  %}
+
+                  {% set e_tom =
+                  state_attr('sensor.dhw_cheapest_window_detail','tomorrow_end')
+                  %}
+
+                  {% set avg_tom =
+                  state_attr('sensor.dhw_cheapest_window_detail','tomorrow_avg_price')
+                  %}
+
+
+                  {% set has_act = (s_act not in
+                  ['unknown','unavailable',None,''] and e_act not in
+                  ['unknown','unavailable',None,'']) %}
+
+                  {% set has_tom = (s_tom not in
+                  ['unknown','unavailable',None,''] and e_tom not in
+                  ['unknown','unavailable',None,'']) %}
+
+
+                  {% if has_act %}
+                    {% set start_dt = as_local(as_datetime(s_act)) %}
+                    {% set end_dt   = as_local(as_datetime(e_act)) %}
+                  {% endif %}
+
+                  {% if not has_act or (has_act and end_dt <= now()) %}
+                    {% set start_dt = as_local(as_datetime(s_tom)) if has_tom else None %}
+                    {% set end_dt   = as_local(as_datetime(e_tom)) if has_tom else None %}
+                  {% endif %}
+
+
+                  {% if start_dt and end_dt %}
+
+                  - **Start:** `{{ start_dt }}`
+
+                  - **End:** `{{ end_dt }}`
+
+                  - **Avg price:** `{{ avg_act if has_act and end_dt > now()
+                  else avg_tom }} c/kWh`
+
+                  {% set mins = ((start_dt - now()).total_seconds() / 60) | int
+                  %}
+
+                  {% if mins >= 0 %}
+
+                  - **Begins in:** {{ mins }} minutes
+
+                  {% else %}
+
+                  - **Started**: {{ (0 - mins) }} minutes ago
+
+                  {% endif %}
+
+                  {% else %}
+
+                  - **No upcoming window today; and tomorrow not available
+                  yet.**
+
+                  {% endif %}
+
+
+                  ---
+
+
+                  ## **Other Conditions**
+
+                  - **Morning window OK:** `{{
+                  states('binary_sensor.dhw_morning_reasonable') }}`
+
+                  - **Manual window active:** `{{
+                  states('binary_sensor.dhw_manual_today_active') }}`
+
+                  - **Boost active:** `{{
+                  states('binary_sensor.maalampo_one_time_charge') }}`
+
+                  - **Heating mode:** `{{
+                  states('input_select.dhw_heating_mode') }}`
+
+
+                  ---
+
+
+                  ## **FINAL DECISION**
+
+                  ### **Heating ON?**  
+
+                  → `{{ states('binary_sensor.dhw_should_heat_now') }}`
+
+
+                  **Reason:**  
+
+                  → `{{ state_attr('binary_sensor.dhw_should_heat_now','reason')
+                  }}`
       - type: grid
         cards:
           - type: custom:apexcharts-card
@@ -1528,82 +2089,110 @@ views:
                     [t1.getTime(), thr],
                     [gap.getTime(), null],   // stop after today
                   ];
-          - type: markdown
-            title: DHW — Decision Breakdown (live)
-            content: >
-              **Morning window reasonable:** {{
-              states('binary_sensor.dhw_morning_reasonable') }}
+          - type: custom:expander-card
+            title: DHW Decision Breakdown
+            cards:
+              - type: markdown
+                content: >
+                  **Morning window reasonable:** {{
+                  states('binary_sensor.dhw_morning_reasonable') }}
 
-              **Morning details:**
+                  **Morning details:**
 
-              {% set price_now =
-              states('sensor.current_electricity_price_in_cents') | float(999)
-              %}
+                  {% set price_now =
+                  states('sensor.current_electricity_price_in_cents') |
+                  float(999) %}
 
-              {% set thr       = states('sensor.dhw_active_threshold_ckwh') |
-              float(0) %}
+                  {% set thr       = states('sensor.dhw_active_threshold_ckwh')
+                  | float(0) %}
 
-              {% set start     =
-              today_at(states('input_datetime.dhw_morning_start')) %}
+                  {% set start     =
+                  today_at(states('input_datetime.dhw_morning_start')) %}
 
-              {% set end       =
-              today_at(states('input_datetime.dhw_morning_end')) %}
+                  {% set end       =
+                  today_at(states('input_datetime.dhw_morning_end')) %}
 
-              {% set within    = (now() >= start and now() < end) %}
+                  {% set within    = (now() >= start and now() < end) %}
 
-              - Window: {{ states('input_datetime.dhw_morning_start') }} → {{
-              states('input_datetime.dhw_morning_end') }}
+                  - Window: {{ states('input_datetime.dhw_morning_start') }} →
+                  {{ states('input_datetime.dhw_morning_end') }}
 
-              - Within window now: {{ within }}
+                  - Within window now: {{ within }}
 
-              - Price now: {{ price_now }} c/kWh
+                  - Price now: {{ price_now }} c/kWh
 
-              - Threshold: {{ thr }} c/kWh
-
-
-              **Manual today active:** {{ states('binary_sensor.dhw_manual_today_active') }}
-
-              - Slot 1: {{ states('input_datetime.dhw_manual_today_start_slot1') }} → {{ states('input_datetime.dhw_manual_today_end_slot1') }}
-
-              - Slot 2: {{ states('input_datetime.dhw_manual_today_start_slot2') }} → {{ states('input_datetime.dhw_manual_today_end_slot2') }}
+                  - Threshold: {{ thr }} c/kWh
 
 
-              **Cheapest window active now:** {{ states('binary_sensor.dhw_cheapest_window_active_now') }}
+                  **Manual today active:** {{
+                  states('binary_sensor.dhw_manual_today_active') }}
 
-              **Cheapest window summary:** {{ states('sensor.dhw_cheapest_window_label') }}
+                  - Slot 1: {{
+                  states('input_datetime.dhw_manual_today_start_slot1') }} → {{
+                  states('input_datetime.dhw_manual_today_end_slot1') }}
 
-              - Start: {{ state_attr('sensor.dhw_cheapest_window_detail','start') }}
+                  - Slot 2: {{
+                  states('input_datetime.dhw_manual_today_start_slot2') }} → {{
+                  states('input_datetime.dhw_manual_today_end_slot2') }}
 
-              - End: {{ state_attr('sensor.dhw_cheapest_window_detail','end') }}
 
-              - Avg price: {{ state_attr('binary_sensor.dhw_cheapest_window_detail','avg_price') }}
-          - type: markdown
-            title: DHW — Upcoming Slots
-            content: >
-              {% set cw_s = state_attr('sensor.dhw_cheapest_window_detail','start') %}
-              {% set cw_e = state_attr('sensor.dhw_cheapest_window_detail','end') %}
-              {% set cw_avg = state_attr('sensor.dhw_cheapest_window_detail','avg_price') %}
-              {% set cw_s_tomorrow = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start') %}
-              {% set cw_e_tomorrow = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_end') %}
-              {% set cw_avg_tomorrow = state_attr('sensor.dhw_cheapest_window_detail','tomorrow_avg_price') %}
-              {% set strict_ready = is_state('sensor.dhw_legionella_cheapest_slot_strict','ready') %}
-              {% set any_ready = is_state('sensor.dhw_legionella_cheapest_slot_any','ready') %}
+                  **Cheapest window active now:** {{
+                  states('binary_sensor.dhw_cheapest_window_active_now') }}
 
-              **Cheapest window:**
-              - Today: {{ cw_s }} → {{ cw_e }} (avg {{ cw_avg }})
-              - Tomorrow: {{ cw_s_tomorrow }} → {{ cw_e_tomorrow }} (avg {{ cw_avg_tomorrow }})
+                  **Cheapest window summary:** {{
+                  states('sensor.dhw_cheapest_window_label') }}
 
-              **Legionella (next):**
-              {% if strict_ready %}
-              - STRICT: {{ state_attr('sensor.dhw_legionella_cheapest_slot_strict','start') }} → {{ state_attr('sensor.dhw_legionella_cheapest_slot_strict','end') }}
-                (avg {{ state_attr('sensor.dhw_legionella_cheapest_slot_strict','avg_price') }} c/kWh)
-              {% elif any_ready %}
-              - ANY (fallback): {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','start') }} → {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','end') }}
-                (avg {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','avg_price') }} c/kWh)
-              {% else %}
-              - No slot data yet
-              {% endif %}
+                  - Start: {{
+                  state_attr('sensor.dhw_cheapest_window_detail','start') }}
 
+                  - End: {{
+                  state_attr('sensor.dhw_cheapest_window_detail','end') }}
+
+                  - Avg price: {{
+                  state_attr('binary_sensor.dhw_cheapest_window_detail','avg_price')
+                  }}
+
+
+
+                  **Cheapest today (absolute):**
+
+                  - {{
+                  state_attr('sensor.dhw_cheapest_window_detail','today_absolute_start')
+                  }} → {{
+                  state_attr('sensor.dhw_cheapest_window_detail','today_absolute_end')
+                  }} (avg {{
+                  state_attr('sensor.dhw_cheapest_window_detail','today_absolute_avg_price')
+                  }})
+
+
+                  **Cheapest today (actionable):**
+
+                  - {{ state_attr('sensor.dhw_cheapest_window_detail','start')
+                  }} → {{ state_attr('sensor.dhw_cheapest_window_detail','end')
+                  }} (avg {{
+                  state_attr('sensor.dhw_cheapest_window_detail','avg_price')
+                  }})
+
+
+                  **Cheapest window active now (absolute):**
+
+                  - {{ states('binary_sensor.dhw_cheapest_window_active_now') }}
+
+
+                  **DHW decision:**
+
+                  - {{ states('binary_sensor.dhw_should_heat_now') }}
+
+                  - Reason: {{
+                  state_attr('binary_sensor.dhw_should_heat_now','reason') }}
+          - type: tile
+            entity: binary_sensor.dhw_morning_reasonable
+          - type: tile
+            entity: input_datetime.dhw_morning_end
+          - type: tile
+            entity: input_datetime.dhw_morning_start
+          - type: tile
+            entity: input_boolean.dhw_morning_enable
   - type: sections
     max_columns: 4
     path: graphs
