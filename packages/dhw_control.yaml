@@ -819,175 +819,77 @@ dhw_control:
 
       - name: 'DHW legionella cheapest slot STRICT'
         unique_id: dhw_legionella_cheapest_slot_strict
-        state: |
+        state: >
           {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
           {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
-          {% if (merged | length) < k or k <= 0 %}
+          {% if k <= 0 or (merged | length) < k %}
             false
           {% else %}
             {% set now_local = now() %}
-            {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-            {% for i in range((merged | length) - k + 1) %}
+            {% set ns = namespace(best_i=-1, best_sum=9e9) %}
+            {% for i in range(0, (merged|length) - k + 1) %}
               {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
-              {% set edt = as_local(as_datetime(merged[i + k - 1]['end'])) %}
               {% if sdt >= now_local %}
-                {% set sumv = 0.0 %}
-                {% for j in range(k) %}
-                  {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
-                {% endfor %}
-                {% set avg = sumv / k %}
-                {% if avg <= 1.0 and sumv < ns.best_sum %}
-                  {% set ns.best_sum = sumv %}
-                  {% set ns.best_i = i %}
-                {% endif %}
-              {% endif %}
-            {% endfor %}
-            {{ ns.best_i >= 0 }}
-          {% endif %}
-        attributes:
-          start: |
-            {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
-            {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
-            {% if (merged | length) < k or k <= 0 %}
-              none
-            {% else %}
-              {% set now_local = now() %}
-              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-              {% for i in range((merged | length) - k + 1) %}
-                {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
-                {% set edt = as_local(as_datetime(merged[i + k - 1]['end'])) %}
-                {% if sdt >= now_local %}
-                  {% set sumv = 0.0 %}
-                  {% for j in range(k) %}
-                    {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
-                  {% endfor %}
+                {% set window = merged[i:i+k] %}
+                {% set prices = window | map(attribute='price') | map('float') | list %}
+                {% if prices|length == k %}
+                  {% set sumv = prices | sum %}
                   {% set avg = sumv / k %}
                   {% if avg <= 1.0 and sumv < ns.best_sum %}
                     {% set ns.best_sum = sumv %}
                     {% set ns.best_i = i %}
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {{ 'true' if ns.best_i >= 0 else 'false' }}
+          {% endif %}
+        attributes:
+          start: >
+            {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+            {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+            {% if k <= 0 or (merged | length) < k %}
+              none
+            {% else %}
+              {% set now_local = now() %}
+              {% set ns = namespace(best_i=-1, best_sum=9e9) %}
+              {% for i in range(0, (merged|length) - k + 1) %}
+                {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
+                {% if sdt >= now_local %}
+                  {% set window = merged[i:i+k] %}
+                  {% set prices = window | map(attribute='price') | map('float') | list %}
+                  {% if prices|length == k %}
+                    {% set sumv = prices | sum %}
+                    {% set avg = sumv / k %}
+                    {% if avg <= 1.0 and sumv < ns.best_sum %}
+                      {% set ns.best_sum = sumv %}
+                      {% set ns.best_i = i %}
+                    {% endif %}
                   {% endif %}
                 {% endif %}
               {% endfor %}
               {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'none' }}
             {% endif %}
-          end: |
+          end: >
             {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
             {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
-            {% if (merged | length) < k or k <= 0 %}
+            {% if k <= 0 or (merged | length) < k %}
               none
             {% else %}
               {% set now_local = now() %}
-              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-              {% for i in range((merged | length) - k + 1) %}
-                {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
-                {% set edt = as_local(as_datetime(merged[i + k - 1]['end'])) %}
-                {% if sdt >= now_local %}
-                  {% set sumv = 0.0 %}
-                  {% for j in range(k) %}
-                    {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
-                  {% endfor %}
-                  {% set avg = sumv / k %}
-                  {% if avg <= 1.0 and sumv < ns.best_sum %}
-                    {% set ns.best_sum = sumv %}
-                    {% set ns.best_i = i %}
-                  {% endif %}
-                {% endif %}
-              {% endfor %}
-              {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else 'none' }}
-            {% endif %}
-          avg_price: |
-            {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
-            {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
-            {% if (merged | length) < k or k <= 0 %}
-              none
-            {% else %}
-              {% set now_local = now() %}
-              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-              {% for i in range((merged | length) - k + 1) %}
-                {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
-                {% set edt = as_local(as_datetime(merged[i + k - 1]['end'])) %}
-                {% if sdt >= now_local %}
-                  {% set sumv = 0.0 %}
-                  {% for j in range(k) %}
-                    {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
-                  {% endfor %}
-                  {% set avg = sumv / k %}
-                  {% if avg <= 1.0 and sumv < ns.best_sum %}
-                    {% set ns.best_sum = sumv %}
-                    {% set ns.best_i = i %}
-                  {% endif %}
-                {% endif %}
-              {% endfor %}
-              {{ (ns.best_sum / k) | round(3) if ns.best_i >= 0 else 'none' }}
-            {% endif %}
-
-      - name: 'DHW legionella cheapest slot ANY'
-        unique_id: dhw_legionella_cheapest_slot_any
-        state: |
-          {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
-          {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
-          {% if (merged | length) < k or k <= 0 %}
-            false
-          {% else %}
-            {% set now_local = now() %}
-            {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-            {% for i in range((merged | length) - k + 1) %}
-              {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
-              {% if sdt >= now_local %}
-                {% set sumv = 0.0 %}
-                {% for j in range(k) %}
-                  {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
-                {% endfor %}
-                {% if sumv < ns.best_sum %}
-                  {% set ns.best_sum = sumv %}
-                  {% set ns.best_i = i %}
-                {% endif %}
-              {% endif %}
-            {% endfor %}
-            {{ ns.best_i >= 0 }}
-          {% endif %}
-        attributes:
-          start: |
-            {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
-            {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
-            {% if (merged | length) < k or k <= 0 %}
-              none
-            {% else %}
-              {% set now_local = now() %}
-              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-              {% for i in range((merged | length) - k + 1) %}
+              {% set ns = namespace(best_i=-1, best_sum=9e9) %}
+              {% for i in range(0, (merged|length) - k + 1) %}
                 {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
                 {% if sdt >= now_local %}
-                  {% set sumv = 0.0 %}
-                  {% for j in range(k) %}
-                    {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
-                  {% endfor %}
-                  {% if sumv < ns.best_sum %}
-                    {% set ns.best_sum = sumv %}
-                    {% set ns.best_i = i %}
-                  {% endif %}
-                {% endif %}
-              {% endfor %}
-              {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'none' }}
-            {% endif %}
-          end: |
-            {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
-            {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
-            {% if (merged | length) < k or k <= 0 %}
-              none
-            {% else %}
-              {% set now_local = now() %}
-              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-              {% for i in range((merged | length) - k + 1) %}
-                {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
-                {% if sdt >= now_local %}
-                  {% set sumv = 0.0 %}
-                  {% for j in range(k) %}
-                    {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
-                  {% endfor %}
-                  {% if sumv < ns.best_sum %}
-                    {% set ns.best_sum = sumv %}
-                    {% set ns.best_i = i %}
+                  {% set window = merged[i:i+k] %}
+                  {% set prices = window | map(attribute='price') | map('float') | list %}
+                  {% if prices|length == k %}
+                    {% set sumv = prices | sum %}
+                    {% set avg = sumv / k %}
+                    {% if avg <= 1.0 and sumv < ns.best_sum %}
+                      {% set ns.best_sum = sumv %}
+                      {% set ns.best_i = i %}
+                    {% endif %}
                   {% endif %}
                 {% endif %}
               {% endfor %}
@@ -996,21 +898,123 @@ dhw_control:
           avg_price: >
             {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
             {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
-            {% if (merged | length) < k or k <= 0 %}
+            {% if k <= 0 or (merged | length) < k %}
               none
             {% else %}
               {% set now_local = now() %}
-              {% set ns = namespace(best_sum=9e9, best_i=-1) %}
-              {% for i in range((merged | length) - k + 1) %}
+              {% set ns = namespace(best_i=-1, best_sum=9e9) %}
+              {% for i in range(0, (merged|length) - k + 1) %}
                 {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
                 {% if sdt >= now_local %}
-                  {% set sumv = 0.0 %}
-                  {% for j in range(k) %}
-                    {% set sumv = sumv + (merged[i+j]['price'] | float(0)) %}
-                  {% endfor %}
+                  {% set window = merged[i:i+k] %}
+                  {% set prices = window | map(attribute='price') | map('float') | list %}
+                  {% if prices|length == k %}
+                    {% set sumv = prices | sum %}
+                    {% set avg = sumv / k %}
+                    {% if avg <= 1.0 and sumv < ns.best_sum %}
+                      {% set ns.best_sum = sumv %}
+                      {% set ns.best_i = i %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+              {{ (ns.best_sum / k) | round(3) if ns.best_i >= 0 else 'none' }}
+            {% endif %}
+
+      - name: 'DHW legionella cheapest slot ANY'
+        unique_id: dhw_legionella_cheapest_slot_any
+        state: >
+          {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+          {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+          {% if k <= 0 or (merged | length) < k %}
+            false
+          {% else %}
+            {% set now_local = now() %}
+            {% set ns = namespace(best_i=-1, best_sum=9e9) %}
+            {% for i in range(0, (merged|length) - k + 1) %}
+              {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
+              {% if sdt >= now_local %}
+                {% set window = merged[i:i+k] %}
+                {% set prices = window | map(attribute='price') | map('float') | list %}
+                {% if prices|length == k %}
+                  {% set sumv = prices | sum %}
                   {% if sumv < ns.best_sum %}
                     {% set ns.best_sum = sumv %}
                     {% set ns.best_i = i %}
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {{ 'true' if ns.best_i >= 0 else 'false' }}
+          {% endif %}
+        attributes:
+          start: >
+            {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+            {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+            {% if k <= 0 or (merged | length) < k %}
+              none
+            {% else %}
+              {% set now_local = now() %}
+              {% set ns = namespace(best_i=-1, best_sum=9e9) %}
+              {% for i in range(0, (merged|length) - k + 1) %}
+                {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
+                {% if sdt >= now_local %}
+                  {% set window = merged[i:i+k] %}
+                  {% set prices = window | map(attribute='price') | map('float') | list %}
+                  {% if prices|length == k %}
+                    {% set sumv = prices | sum %}
+                    {% if sumv < ns.best_sum %}
+                      {% set ns.best_sum = sumv %}
+                      {% set ns.best_i = i %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+              {{ merged[ns.best_i]['start'] if ns.best_i >= 0 else 'none' }}
+            {% endif %}
+          end: >
+            {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+            {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+            {% if k <= 0 or (merged | length) < k %}
+              none
+            {% else %}
+              {% set now_local = now() %}
+              {% set ns = namespace(best_i=-1, best_sum=9e9) %}
+              {% for i in range(0, (merged|length) - k + 1) %}
+                {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
+                {% if sdt >= now_local %}
+                  {% set window = merged[i:i+k] %}
+                  {% set prices = window | map(attribute='price') | map('float') | list %}
+                  {% if prices|length == k %}
+                    {% set sumv = prices | sum %}
+                    {% if sumv < ns.best_sum %}
+                      {% set ns.best_sum = sumv %}
+                      {% set ns.best_i = i %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+              {{ merged[ns.best_i + k - 1]['end'] if ns.best_i >= 0 else 'none' }}
+            {% endif %}
+          avg_price: >
+            {% set merged = state_attr('sensor.nordpool_3_day_merged_prices','merged_slots') or [] %}
+            {% set k = (states('input_number.dhw_legionella_hours') | float(3) * 4) | int %}
+            {% if k <= 0 or (merged | length) < k %}
+              none
+            {% else %}
+              {% set now_local = now() %}
+              {% set ns = namespace(best_i=-1, best_sum=9e9) %}
+              {% for i in range(0, (merged|length) - k + 1) %}
+                {% set sdt = as_local(as_datetime(merged[i]['start'])) %}
+                {% if sdt >= now_local %}
+                  {% set window = merged[i:i+k] %}
+                  {% set prices = window | map(attribute='price') | map('float') | list %}
+                  {% if prices|length == k %}
+                    {% set sumv = prices | sum %}
+                    {% if sumv < ns.best_sum %}
+                      {% set ns.best_sum = sumv %}
+                      {% set ns.best_i = i %}
+                    {% endif %}
                   {% endif %}
                 {% endif %}
               {% endfor %}
