@@ -293,16 +293,12 @@ dhw_control:
           unique_id: dhw_boost_elapsed_time
           state: |
             {% if is_state('timer.dhw_boost','active') %}
-              {% set start_time = state_attr('timer.dhw_boost','last_changed') %}
-              {% if start_time %}
-                {% set elapsed = (now() - as_datetime(start_time)).total_seconds() %}
+              {% set started = states.timer.dhw_boost.last_changed %}
+              {% if started %}
+                {% set elapsed = (now() - started).total_seconds() | int %}
                 {{ '%02d:%02d:%02d' % (elapsed // 3600, (elapsed % 3600) // 60, elapsed % 60) }}
-              {% else %}
-                unknown
-              {% endif %}
-            {% else %}
-              idle
-            {% endif %}
+              {% else %} unknown {% endif %}
+            {% else %} idle {% endif %}
 
         - name: "Nordpool Average Yesterday"
           unique_id: nordpool_average_yesterday
