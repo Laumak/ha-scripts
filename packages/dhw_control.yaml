@@ -1292,8 +1292,9 @@ dhw_control:
           data:
             temperature: '{{ temp_legio | round(0) }}'
         # Wait until the computed end time
-        - delay:
-            until: '{{ end_time }}'
+        - wait_template: "{{ now() >= end_time }}"
+          timeout: "6:00:00" # keep a safety cap larger than the longest run
+          continue_on_timeout: false
         # Restore normal target temperature
         - service: water_heater.set_temperature
           target:
