@@ -1213,32 +1213,51 @@ dhw_control:
                 unknown
               {% endif %}
             temp: "{{ states('input_number.dhw_legionella_temp') | float }}"
+
+            # Parsed datetimes (None if not available)
+            start_dt: >-
+              {% if start not in ['unknown','unavailable',''] %}
+                {{ as_datetime(start) }}
+              {% else %} {{ none }} {% endif %}
+            end_dt: >-
+              {% if end not in ['unknown','unavailable',''] %}
+                {{ as_datetime(end) }}
+              {% else %} {{ none }} {% endif %}
+
         - choose:
-            - conditions:
-                "{{ start not in ['unknown','unavailable',''] and end not in
-                ['unknown','unavailable',''] }}"
+            - conditions: "{{ start_dt is not none and end_dt is not none }}"
               sequence:
+                # mark last-run immediately so we won't retry today if HA restarts
                 - service: input_datetime.set_datetime
                   target:
                     entity_id: input_datetime.dhw_legionella_last_run
                   data:
-                    datetime: '{{ now() }}'
-                - delay:
-                    until: '{{ as_local(as_datetime(start)) }}'
+                    datetime: "{{ now() }}"
+
+                # wait until the start time
+                - wait_template: "{{ now() >= start_dt }}"
+                  timeout: "2:00:00" # safety cap; adjust if your window can be longer
+                  continue_on_timeout: false
+
+                # raise temperature for the legionella cycle
                 - service: water_heater.set_temperature
                   target:
                     entity_id: water_heater.cu401b_s_domestic_hot_water
                   data:
-                    temperature: '{{ temp | round(0) }}'
-                - delay:
-                    until: '{{ as_local(as_datetime(end)) }}'
+                    temperature: "{{ temp | round(0) }}"
+
+                # wait until the end time
+                - wait_template: "{{ now() >= end_dt }}"
+                  timeout: "4:00:00" # safety cap; adjust to max cycle length
+                  continue_on_timeout: false
+
+                # restore normal target temperature
                 - service: water_heater.set_temperature
                   target:
                     entity_id: water_heater.cu401b_s_domestic_hot_water
                   data:
-                    temperature:
-                      "{{ states('input_number.dhw_target_temp') | float |
-                      round(0) }}"
+                    temperature: "{{ states('input_number.dhw_target_temp') | float | round(0) }}"
+
 
     - id: dhw_legionella_run_now
       alias: DHW Legionella — Run Now (manual)
