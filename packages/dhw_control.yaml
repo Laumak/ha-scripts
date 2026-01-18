@@ -1203,45 +1203,52 @@ dhw_control:
           target:
             entity_id: timer.dhw_boost
 
+    # If days_since_last_run ≥ 3 and a STRICT future window exists → schedule that window.
+    # Else if days_since_last_run ≥ 7 and an ANY future window exists → schedule that window.
+    # Otherwise do nothing (we’ll try again on the next trigger).
     - id: dhw_legionella_cycle
       alias: DHW Legionella Cycle
       mode: single
       trigger:
-        - platform: time
-          at: '02:00:00' # daily check
+        - platform: time_pattern
+          minutes: "0" # every hour, at HH:00
 
       condition:
         - condition: state
           entity_id: input_boolean.dhw_legionella_enabled
           state: 'on'
-        # weekly guard (>= 6 full days since last run)
-        - condition: template
-          value_template: |
-            {% set last_run = states('input_datetime.dhw_legionella_last_run') %}
-            {% if last_run in ['unknown','unavailable',''] %}
-              true
-            {% else %}
-              {% set last_run_dt = as_local(as_datetime(last_run)) %}
-              {% set days_since = ((now() - last_run_dt).total_seconds() / 86400) | int %}
-              {{ days_since >= 6 }}
-            {% endif %}
 
       action:
         - variables:
+            # Days since last *actual* run
+            last_run_raw: "{{ states('input_datetime.dhw_legionella_last_run') }}"
+            days_since: |
+              {% if last_run_raw in ['unknown','unavailable',''] %}
+                999
+              {% else %}
+                {% set last_run = as_local(as_datetime(last_run_raw)) %}
+                {{ ((now() - last_run).total_seconds() / 86400) | float }}
+              {% endif %}
+
+            # Readiness flags from *binary* sensors (future windows only)
             strict_ready: "{{ is_state('binary_sensor.dhw_legionella_cheapest_slot_strict','on') }}"
             any_ready:    "{{ is_state('binary_sensor.dhw_legionella_cheapest_slot_any','on') }}"
 
+            # Decide which window to use (enforce 3–7 day policy)
             start: |
-              {% if strict_ready %}{{ state_attr('binary_sensor.dhw_legionella_cheapest_slot_strict','start') }}
-              {% elif any_ready %}{{ state_attr('binary_sensor.dhw_legionella_cheapest_slot_any','start') }}
+              {% if strict_ready and days_since >= 3 %}
+                {{ state_attr('binary_sensor.dhw_legionella_cheapest_slot_strict','start') }}
+              {% elif any_ready and days_since >= 7 %}
+                {{ state_attr('binary_sensor.dhw_legionella_cheapest_slot_any','start') }}
               {% else %}none{% endif %}
             end: |
-              {% if strict_ready %}{{ state_attr('binary_sensor.dhw_legionella_cheapest_slot_strict','end') }}
-              {% elif any_ready %}{{ state_attr('binary_sensor.dhw_legionella_cheapest_slot_any','end') }}
+              {% if strict_ready and days_since >= 3 %}
+                {{ state_attr('binary_sensor.dhw_legionella_cheapest_slot_strict','end') }}
+              {% elif any_ready and days_since >= 7 %}
+                {{ state_attr('binary_sensor.dhw_legionella_cheapest_slot_any','end') }}
               {% else %}none{% endif %}
-            temp: "{{ states('input_number.dhw_legionella_temp') | float }}"
 
-            # Local, aware datetimes (or none)
+            temp: "{{ states('input_number.dhw_legionella_temp') | float }}"
             start_dt: |
               {% if start not in ['none','unknown','unavailable',''] %}
                 {{ as_local(as_datetime(start)) }}
@@ -1252,32 +1259,33 @@ dhw_control:
               {% else %}{{ none }}{% endif %}
 
         - choose:
+            # Proceed only if a valid target window was selected
             - conditions:
                 - condition: template
                   value_template: "{{ start_dt is not none and end_dt is not none }}"
               sequence:
-                # Mark last run first to prevent repeats on restart
+                # Wait for the start of the chosen window
+                - wait_template: "{{ now() >= start_dt }}"
+                  timeout: "24:00:00" # generous cap
+                  continue_on_timeout: false
+
+                # Mark actual start-time of the run (do NOT mark earlier)
                 - service: input_datetime.set_datetime
                   target:
                     entity_id: input_datetime.dhw_legionella_last_run
                   data:
                     datetime: "{{ now() }}"
 
-                # Wait until the start of the chosen window
-                - wait_template: "{{ now() >= start_dt }}"
-                  timeout: "6:00:00"
-                  continue_on_timeout: false
-
-                # Raise temperature for legionella cycle
+                # Raise temperature for the legionella cycle
                 - service: water_heater.set_temperature
                   target:
                     entity_id: water_heater.cu401b_s_domestic_hot_water
                   data:
                     temperature: "{{ temp | round(0) }}"
 
-                # Wait until end of the window
+                # Wait for end of the window
                 - wait_template: "{{ now() >= end_dt }}"
-                  timeout: "6:00:00"
+                  timeout: "24:00:00"
                   continue_on_timeout: false
 
                 # Restore normal target
