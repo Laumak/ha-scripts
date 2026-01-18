@@ -1173,10 +1173,13 @@ dhw_control:
       trigger:
         - platform: time
           at: '02:00:00' # daily check
+
       condition:
         - condition: state
           entity_id: input_boolean.dhw_legionella_enabled
           state: 'on'
+
+        # Run if never run OR last run was ≥ 6 days ago
         - condition: template
           value_template: |
             {% set last_run = states('input_datetime.dhw_legionella_last_run') %}
@@ -1197,57 +1200,55 @@ dhw_control:
                 {{ state_attr('sensor.dhw_legionella_cheapest_slot_strict','start') }}
               {% elif any_ready %}
                 {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','start') }}
-              {% else %}
-                unknown
-              {% endif %}
+              {% else %}unknown{% endif %}
             end: |
               {% if strict_ready %}
                 {{ state_attr('sensor.dhw_legionella_cheapest_slot_strict','end') }}
               {% elif any_ready %}
                 {{ state_attr('sensor.dhw_legionella_cheapest_slot_any','end') }}
-              {% else %}
-                unknown
-              {% endif %}
+              {% else %}unknown{% endif %}
             temp: "{{ states('input_number.dhw_legionella_temp') | float }}"
 
-            # Parsed datetimes (None if not available)
-            start_dt: >-
+            # Local, aware datetimes (or none)
+            start_dt: |
               {% if start not in ['unknown','unavailable',''] %}
-                {{ as_datetime(start) }}
+                {{ as_local(as_datetime(start)) }}
               {% else %} {{ none }} {% endif %}
-            end_dt: >-
+            end_dt: |
               {% if end not in ['unknown','unavailable',''] %}
-                {{ as_datetime(end) }}
+                {{ as_local(as_datetime(end)) }}
               {% else %} {{ none }} {% endif %}
 
         - choose:
-            - conditions: "{{ start_dt is not none and end_dt is not none }}"
+            - conditions:
+                - condition: template
+                  value_template: "{{ start_dt is not none and end_dt is not none }}"
               sequence:
-                # mark last-run immediately so we won't retry today if HA restarts
+                # Mark last run first to prevent repeats on restart
                 - service: input_datetime.set_datetime
                   target:
                     entity_id: input_datetime.dhw_legionella_last_run
                   data:
                     datetime: "{{ now() }}"
 
-                # wait until the start time
+                # Wait until the start of the chosen window
                 - wait_template: "{{ now() >= start_dt }}"
-                  timeout: "2:00:00" # safety cap; adjust if your window can be longer
+                  timeout: "6:00:00"
                   continue_on_timeout: false
 
-                # raise temperature for the legionella cycle
+                # Raise temperature for legionella cycle
                 - service: water_heater.set_temperature
                   target:
                     entity_id: water_heater.cu401b_s_domestic_hot_water
                   data:
                     temperature: "{{ temp | round(0) }}"
 
-                # wait until the end time
+                # Wait until end of the window
                 - wait_template: "{{ now() >= end_dt }}"
-                  timeout: "4:00:00" # safety cap; adjust to max cycle length
+                  timeout: "6:00:00"
                   continue_on_timeout: false
 
-                # restore normal target temperature
+                # Restore normal target
                 - service: water_heater.set_temperature
                   target:
                     entity_id: water_heater.cu401b_s_domestic_hot_water
