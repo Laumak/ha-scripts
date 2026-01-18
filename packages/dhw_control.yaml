@@ -1271,7 +1271,7 @@ dhw_control:
         - variables:
             temp_legio: "{{ states('input_number.dhw_legionella_temp') | float }}"
             hours: "{{ states('input_number.dhw_legionella_hours') | float(3) }}"
-            end_time: '{{ (now() + timedelta(hours=hours)) }}'
+            end_time: "{{ now() + timedelta(hours=hours) }}"
         # Optional: cancel Boost to avoid conflicting overrides
         - choose:
             - conditions: "{{ is_state('timer.dhw_boost','active') }}"
