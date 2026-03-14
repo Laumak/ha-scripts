@@ -60,7 +60,7 @@ dhw_control:
 
     dhw_eco_temp:
       name: DHW ECO Temperature
-      min: 30
+      min: 20
       max: 50
       step: 1
       unit_of_measurement: "°C"
@@ -224,7 +224,7 @@ dhw_control:
             {% set avg_today = states('sensor.nordpool_average_today') | float(0) %}
             {% set factor = states('input_number.dynamic_threshold_factor') | float(0.85) %}
             {% set dyn = (avg_today * factor) if avg_today > 0 else 0 %}
-            {% set cap = states('input_number.price_cap_cents') | float(15) %}
+            {% set cap = float(states('input_number.korkein_sallittu_sahkon_hinta')) %}
             {% set mode = states('input_select.dhw_pricing_mode') %}
             {% if mode == 'Dynamic + cap' %}
               {{ ([dyn if dyn > 0 else 999, cap] | min) | round(2) }}
@@ -239,7 +239,7 @@ dhw_control:
               {% set k = states('input_number.dynamic_threshold_factor') | float(0.85) %}
               {{ (avg * k) | round(2) if avg > 0 else 'unknown' }}
             mode: "{{ states('input_select.dhw_pricing_mode') }}"
-            cap: "{{ states('input_number.price_cap_cents') }}"
+            cap: "{{ float(states('input_number.korkein_sallittu_sahkon_hinta')) }}"
 
         - name: "DHW Heating Decision Code"
           unique_id: dhw_heating_decision_code
@@ -683,6 +683,127 @@ dhw_control:
             sum_price: "{{ state_attr('sensor.dhw_cheapest_window_detail','tomorrow_sum_price') }}"
             avg_price: "{{ state_attr('sensor.dhw_cheapest_window_detail','tomorrow_avg_price') }}"
 
+        - name: "DHW Legionella Next Start"
+          unique_id: dhw_legionella_next_start
+          state: >
+            {% if is_state('input_boolean.dhw_legionella_enabled','off') %}
+              disabled
+            {% else %}
+              {% set last_raw = states('input_datetime.dhw_legionella_last_run') %}
+              {% if last_raw and (last_raw | lower) not in ['unknown','unavailable','none',''] %}
+                {% set last_dt = as_local(as_datetime(last_raw)) %}
+              {% else %}
+                {% set last_dt = none %}
+              {% endif %}
+              {% set days = ((now() - last_dt).total_seconds() / 86400) if last_dt else 999 %}
+
+              {% set ss = state_attr('binary_sensor.dhw_legionella_cheapest_slot_strict','start') %}
+              {% set as_ = state_attr('binary_sensor.dhw_legionella_cheapest_slot_any','start') %}
+
+              {% set strict_start = as_local(as_datetime(ss)) if ss and (ss | lower) not in ['unknown','unavailable','none',''] else none %}
+              {% set any_start    = as_local(as_datetime(as_)) if as_ and (as_ | lower) not in ['unknown','unavailable','none',''] else none %}
+
+              {% if strict_start and strict_start > now() and days >= 3 %}
+                {{ strict_start }}
+              {% elif any_start and any_start > now() and days >= 7 %}
+                {{ any_start }}
+              {% else %}
+                unknown
+              {% endif %}
+            {% endif %}
+          attributes:
+            days_since_last: >
+              {% set last_raw = states('input_datetime.dhw_legionella_last_run') %}
+              {% if last_raw and (last_raw | lower) not in ['unknown','unavailable','none',''] %}
+                {% set last_dt = as_local(as_datetime(last_raw)) %}
+                {{ ((now() - last_dt).total_seconds() / 86400) | round(3) }}
+              {% else %}
+                unknown
+              {% endif %}
+            strict_start_raw: "{{ state_attr('binary_sensor.dhw_legionella_cheapest_slot_strict','start') }}"
+            any_start_raw: "{{ state_attr('binary_sensor.dhw_legionella_cheapest_slot_any','start') }}"
+
+        - name: "DHW Legionella Next End"
+          unique_id: dhw_legionella_next_end
+          state: >
+            {% if is_state('input_boolean.dhw_legionella_enabled','off') %}
+              disabled
+            {% else %}
+              {% set last_raw = states('input_datetime.dhw_legionella_last_run') %}
+              {% if last_raw and (last_raw | lower) not in ['unknown','unavailable','none',''] %}
+                {% set last_dt = as_local(as_datetime(last_raw)) %}
+              {% else %}
+                {% set last_dt = none %}
+              {% endif %}
+              {% set days = ((now() - last_dt).total_seconds() / 86400) if last_dt else 999 %}
+
+              {% set se = state_attr('binary_sensor.dhw_legionella_cheapest_slot_strict','end') %}
+              {% set ae = state_attr('binary_sensor.dhw_legionella_cheapest_slot_any','end') %}
+              {% set ss = state_attr('binary_sensor.dhw_legionella_cheapest_slot_strict','start') %}
+              {% set as_ = state_attr('binary_sensor.dhw_legionella_cheapest_slot_any','start') %}
+
+              {% set strict_start = as_local(as_datetime(ss)) if ss and (ss | lower) not in ['unknown','unavailable','none',''] else none %}
+              {% set any_start    = as_local(as_datetime(as_)) if as_ and (as_ | lower) not in ['unknown','unavailable','none',''] else none %}
+              {% set strict_end   = as_local(as_datetime(se)) if se and (se | lower) not in ['unknown','unavailable','none',''] else none %}
+              {% set any_end      = as_local(as_datetime(ae)) if ae and (ae | lower) not in ['unknown','unavailable','none',''] else none %}
+
+              {% set strict_future = strict_start is not none and strict_start > now() %}
+              {% set any_future    = any_start is not none and any_start > now() %}
+
+              {% if strict_future and days >= 3 %}
+                {{ strict_end }}
+              {% elif any_future and days >= 7 %}
+                {{ any_end }}
+              {% else %}
+                unknown
+              {% endif %}
+            {% endif %}
+          attributes:
+            days_since_last: >
+              {% set last_raw = states('input_datetime.dhw_legionella_last_run') %}
+              {% if last_raw and (last_raw | lower) not in ['unknown','unavailable','none',''] %}
+                {% set last_dt = as_local(as_datetime(last_raw)) %}
+                {{ ((now() - last_dt).total_seconds() / 86400) | round(3) }}
+              {% else %}
+                unknown
+              {% endif %}
+            strict_end_raw: "{{ state_attr('binary_sensor.dhw_legionella_cheapest_slot_strict','end') }}"
+            any_end_raw: "{{ state_attr('binary_sensor.dhw_legionella_cheapest_slot_any','end') }}"
+
+        - name: "DHW Legionella Next Run Avg Price"
+          unique_id: dhw_legionella_next_run_avg_price
+          state: >
+            {% set price_entity = 'sensor.nordpool_3_day_merged_prices' %}
+            {% set ns = states('sensor.dhw_legionella_next_start') %}
+            {% set ne = states('sensor.dhw_legionella_next_end') %}
+            {% if ns in ['unknown','unavailable','','none'] or ne in ['unknown','unavailable','','none'] %}
+              unknown
+            {% else %}
+              {% set ns_dt = as_local(as_datetime(ns)) %}
+              {% set ne_dt = as_local(as_datetime(ne)) %}
+              {% set slots = state_attr(price_entity,'merged_slots') %}
+              {% if not slots %}
+                unknown
+              {% else %}
+                {% set nsn = namespace(total=0.0, cnt=0) %}
+                {% for it in slots %}
+                  {% set s = it.start if it.start is defined else (it['start'] if 'start' in it else none) %}
+                  {% set e = it.end   if it.end   is defined else (it['end']   if 'end'   in it else none) %}
+                  {% set p = it.price if it.price is defined else (it['price'] if 'price' in it else none) %}
+                  {% if s not in [none,'','unknown','unavailable'] and e not in [none,'','unknown','unavailable'] and p not in [none,'','unknown','unavailable'] %}
+                    {% set sdt = as_local(as_datetime(s)) %}
+                    {% set edt = as_local(as_datetime(e)) %}
+                    {% if sdt < ne_dt and edt > ns_dt %}
+                      {% set nsn.total = nsn.total + (p | float) %}
+                      {% set nsn.cnt = nsn.cnt + 1 %}
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+                {% if nsn.cnt == 0 %} unknown {% else %} {{ (nsn.total / nsn.cnt) | round(3) }} {% endif %}
+              {% endif %}
+            {% endif %}
+          unit_of_measurement: "c/kWh"
+
     - binary_sensor:
         - name: "DHW manual today active"
           unique_id: dhw_manual_today_active
@@ -778,7 +899,7 @@ dhw_control:
             {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
             {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
             {% set thr = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
-            {% set soft_cap = states('input_number.dhw_cheapest_soft_cap') | float(20) %}
+            {% set soft_cap = float(states('input_number.dhw_cheapest_soft_cap')) %}
 
             {# Cheapest allowed if price <= threshold OR <= soft cap #}
             {% set cheapest_ok = cheapest_on and (price_now <= thr or price_now <= soft_cap) %}
