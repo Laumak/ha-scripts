@@ -1,0 +1,38 @@
+name: Create Draft PR from more-stuff
+
+on:
+  push:
+    branches:
+      - copilot/more-stuff
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  create-draft-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create draft PR from more-stuff to main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          existing=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --head more-stuff \
+            --base main \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "Draft PR already exists: #$existing"
+          else
+            gh pr create \
+              --repo "${{ github.repository }}" \
+              --head more-stuff \
+              --base main \
+              --title "Merge more-stuff into main" \
+              --body "" \
+              --draft
+            echo "Draft PR created successfully"
+          fi
