@@ -690,6 +690,12 @@ views:
                             detail: false
                             hours_to_show: 1
                         features_position: bottom
+                      - type: tile
+                        entity: timer.khh_ll_timer
+                        name: Timer
+                        icon: mdi:clock
+                        vertical: false
+                        features_position: bottom
                   - type: vertical-stack
                     cards:
                       - graph: line
