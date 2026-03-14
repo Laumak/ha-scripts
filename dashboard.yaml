@@ -2079,26 +2079,12 @@ views:
           - type: markdown
             content: >-
               ## Cheapest Window Tomorrow
-
-              {% if(state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start')) != 'unknown' %}
-
-
-              - **Start:** `{{state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start')}}`
-
-              - **End:** `{{
-              state_attr('sensor.dhw_cheapest_window_detail','tomorrow_end') }}`
-
-              - **Average price:** `{{
-              state_attr('sensor.dhw_cheapest_window_detail','tomorrow_avg_price')
-              }} c/kWh` 
-
-
+              {% if(state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start'))!= 'unknown' %}
+              - **Start:** `{{ state_attr('sensor.dhw_cheapest_window_detail','tomorrow_start') }}`
+              - **End:** `{{  state_attr('sensor.dhw_cheapest_window_detail','tomorrow_end') }}`
+              - **Average price:** `{{ state_attr('sensor.dhw_cheapest_window_detail','tomorrow_avg_price') }} c/kWh` 
               {% else %}
-
-
               No tomorrow prices available yet.
-
-
               {% endif %}
             grid_options:
               columns: 12
