@@ -45,7 +45,7 @@ views:
                 entries:
                   - type: toggle
                     entity_id: input_boolean.kotona
-                    icon: ''
+                    icon: ""
                     tap_action:
                       action: more-info
                       target:
@@ -56,7 +56,7 @@ views:
                     haptics: true
                     label: >-
                       {{ 'Kotona' if is_state('input_boolean.kotona', 'on') else
-                      'Ei kotona' }} 
+                      'Ei kotona' }}
                     value_from_hass_delay: 1
             transparent: false
             grid_options:
@@ -162,7 +162,7 @@ views:
                                 haptics: true
                                 unchecked_icon: mdi:radiator-off
                                 checked_icon: mdi:radiator
-                                icon: ''
+                                icon: ""
                                 thumb: default
                           - type: trend-graph
                             detail: true
@@ -335,7 +335,7 @@ views:
                               - heat
                               - cool
                               - fan_only
-                              - 'off'
+                              - "off"
                               - dry
                           - style: dropdown
                             type: climate-fan-modes
@@ -475,14 +475,14 @@ views:
                           action: perform-action
                           perform_action: input_datetime.set_datetime
                           data:
-                            time: '{{ value }}'
+                            time: "{{ value }}"
                           target:
                             entity_id: input_datetime.mh_ilp_sammutus
                         thumb: time
                         step: 300
                         range:
-                          - '00:00:00'
-                          - '23:59:59'
+                          - "00:00:00"
+                          - "23:59:59"
                         haptics: true
                 features_position: inline
               - show_name: true
@@ -541,7 +541,7 @@ views:
               type: area
               area: bedroom
               features_position: bottom
-              color: ''
+              color: ""
               vertical: false
             title-card-button-overlay: true
             title-card-clickable: false
@@ -568,7 +568,7 @@ views:
                           - heat
                           - cool
                           - fan_only
-                          - 'off'
+                          - "off"
                           - dry
                       - type: climate-fan-modes
                         style: dropdown
@@ -614,7 +614,7 @@ views:
               type: area
               area: living_room
               features_position: bottom
-              color: ''
+              color: ""
               vertical: false
               features:
                 - type: custom:service-call
@@ -631,7 +631,7 @@ views:
                         data:
                           transition: 2
                       checked_values:
-                        - 'on'
+                        - "on"
                       haptics: true
                       check_numeric: false
                       allow_list: true
@@ -716,7 +716,7 @@ views:
               type: area
               area: kodinhoitohuone
               features_position: bottom
-              color: ''
+              color: ""
               vertical: false
               features:
                 - type: area-controls
@@ -766,7 +766,7 @@ views:
               type: area
               area: toimisto
               features_position: bottom
-              color: ''
+              color: ""
               vertical: false
             title-card-clickable: false
             title-card-button-overlay: true
@@ -789,7 +789,7 @@ views:
                           action: perform-action
                           perform_action: input_datetime.set_datetime
                           data:
-                            time: '{{ value }}'
+                            time: "{{ value }}"
                           target:
                             entity_id:
                               - input_datetime.sammuta_ilmanvaihto
@@ -797,8 +797,8 @@ views:
                         step: 300
                         haptics: true
                         range:
-                          - '00:00:10'
-                          - '23:59:59'
+                          - "00:00:10"
+                          - "23:59:59"
                 features_position: inline
               - type: tile
                 grid_options:
@@ -870,7 +870,7 @@ views:
               type: area
               area: keittio
               features_position: bottom
-              color: ''
+              color: ""
               vertical: false
               features:
                 - type: custom:service-call
@@ -928,7 +928,7 @@ views:
                 grid_options:
                   columns: full
                 entity: sensor.mlp_power
-                icon: ''
+                icon: ""
                 color: accent
                 vertical: false
                 features:
@@ -949,7 +949,7 @@ views:
               type: area
               area: varasto
               features_position: bottom
-              color: ''
+              color: ""
               vertical: false
             title-card-clickable: false
             title-card-button-overlay: true
@@ -1171,18 +1171,18 @@ views:
                 duration: 15min
             update_interval: 5min
             yaxis:
-              - max: '|0|'
+              - max: "|0|"
                 min: 0
                 decimals: 0
             series:
               - entity: sensor.p1_meter_power
                 name: Today
-                color: '#1e88e5'
+                color: "#1e88e5"
                 type: area
               - entity: sensor.p1_meter_power
                 name: Yesterday
-                offset: '-24h'
-                color: '#43a047'
+                offset: "-24h"
+                color: "#43a047"
                 type: area
                 opacity: 0.2
         column_span: 1
@@ -1204,14 +1204,14 @@ views:
                           action: perform-action
                           perform_action: input_datetime.set_datetime
                           data:
-                            time: '{{ value }}'
+                            time: "{{ value }}"
                           target:
                             entity_id: input_datetime.shellyt_paalle
                         thumb: time
                         step: 60
                         range:
-                          - '00:00:00'
-                          - '23:59:59'
+                          - "00:00:00"
+                          - "23:59:59"
                         haptics: true
                   - type: custom:service-call
                     entries:
@@ -1222,14 +1222,14 @@ views:
                           action: perform-action
                           perform_action: input_datetime.set_datetime
                           data:
-                            time: '{{ value }}'
+                            time: "{{ value }}"
                           target:
                             entity_id: input_datetime.shellyt_paalle_2
                         thumb: time
                         step: 300
                         range:
-                          - '00:00:00'
-                          - '23:59:59'
+                          - "00:00:00"
+                          - "23:59:59"
                 features_position: bottom
               - type: tile
                 entity: input_datetime.shellyt_pois
@@ -1245,14 +1245,14 @@ views:
                           action: perform-action
                           perform_action: input_datetime.set_datetime
                           data:
-                            time: '{{ value }}'
+                            time: "{{ value }}"
                           target:
                             entity_id: input_datetime.shellyt_pois
                         thumb: time
                         step: 60
                         range:
-                          - '00:00:00'
-                          - '23:59:59'
+                          - "00:00:00"
+                          - "23:59:59"
                         haptics: true
                   - type: custom:service-call
                     entries:
@@ -1263,14 +1263,14 @@ views:
                           action: perform-action
                           perform_action: input_datetime.set_datetime
                           data:
-                            time: '{{ value }}'
+                            time: "{{ value }}"
                           target:
                             entity_id: input_datetime.shellyt_pois_2
                         thumb: time
                         step: 300
                         range:
-                          - '00:00:00'
-                          - '23:59:59'
+                          - "00:00:00"
+                          - "23:59:59"
                         haptics: true
                 features_position: bottom
           - type: custom:apexcharts-card
@@ -1282,7 +1282,7 @@ views:
               start: day
             now:
               show: true
-              label: ''
+              label: ""
             apex_config:
               grid:
                 show: true
@@ -1305,7 +1305,7 @@ views:
                       EVAL:v => `${v.toFixed(1)} c`
               - id: consumption
                 min: 0
-                max: '|+100|'
+                max: "|+100|"
                 opposite: true
                 apex_config:
                   forceNiceScale: true
@@ -1331,15 +1331,15 @@ views:
                 opacity: 1
                 color_threshold:
                   - value: -1
-                    color: '#6EFDEF'
+                    color: "#6EFDEF"
                   - value: 0
-                    color: '#6EFD99'
+                    color: "#6EFD99"
                   - value: 5
-                    color: '#FDE86E'
+                    color: "#FDE86E"
                   - value: 10
-                    color: '#FD6E6E'
+                    color: "#FD6E6E"
                   - value: 20
-                    color: '#BF40BF'
+                    color: "#BF40BF"
                 data_generator: >
                   const today = new Date(); const todayDate = today.getDate();
                   const
@@ -1365,7 +1365,7 @@ views:
               - entity: sensor.p1_meter_power
                 yaxis_id: consumption
                 type: line
-                unit: ' W'
+                unit: " W"
                 name: Sähkön kulutus
                 stroke_width: 2
                 opacity: 1
@@ -1388,19 +1388,19 @@ views:
                   in_chart: false
                 color_threshold:
                   - value: -1
-                    color: '#6EFDEF'
+                    color: "#6EFDEF"
                   - value: 0
-                    color: '#6EFD99'
+                    color: "#6EFD99"
                   - value: 10
-                    color: '#FDE86E'
+                    color: "#FDE86E"
                   - value: 20
-                    color: '#FD6E6E'
+                    color: "#FD6E6E"
               - entity: sensor.nordpool_average_today
                 yaxis_id: price
                 name: Avg Today
                 type: line
                 stroke_width: 2
-                color: '#44aa88'
+                color: "#44aa88"
                 show:
                   legend_value: false
                 data_generator: >
@@ -1444,7 +1444,7 @@ views:
               xaxis:
                 type: datetime
                 tickAmount: 7
-                tickPlacement: 'on'
+                tickPlacement: "on"
                 labels:
                   hideOverlappingLabels: false
                   formatter: |
@@ -2041,13 +2041,13 @@ views:
                 duration: 5min
             update_interval: 5min
             yaxis:
-              - max: '|0|'
+              - max: "|0|"
                 min: 0
                 decimals: 0
             series:
               - entity: sensor.p1_meter_power
                 name: Today
-                color: '#1e88e5'
+                color: "#1e88e5"
                 type: line
       - type: grid
         cards:
@@ -2069,7 +2069,7 @@ views:
       - type: grid
         cards:
           - type: markdown
-            content: '{{ states(''sensor.nordpool_predict_fi_narration_fi'') }}'
+            content: "{{ states('sensor.nordpool_predict_fi_narration_fi') }}"
           - type: markdown
             content: >-
               ## Cheapest Window Tomorrow
@@ -2176,15 +2176,15 @@ views:
                           action: perform-action
                           perform_action: input_datetime.set_datetime
                           data:
-                            time: '{{ value }}'
+                            time: "{{ value }}"
                           target:
                             entity_id: input_datetime.shellyt_paalle
                           confirmation: false
                         thumb: time
                         step: 60
                         range:
-                          - '00:00:00'
-                          - '23:59:59'
+                          - "00:00:00"
+                          - "23:59:59"
                         haptics: true
                   - type: custom:service-call
                     entries:
@@ -2195,14 +2195,14 @@ views:
                           action: perform-action
                           perform_action: input_datetime.set_datetime
                           data:
-                            time: '{{ value }}'
+                            time: "{{ value }}"
                           target:
                             entity_id: input_datetime.shellyt_paalle_2
                         thumb: time
                         step: 300
                         range:
-                          - '00:00:00'
-                          - '23:59:59'
+                          - "00:00:00"
+                          - "23:59:59"
                 features_position: bottom
               - type: tile
                 entity: input_datetime.shellyt_pois
@@ -2218,14 +2218,14 @@ views:
                           action: perform-action
                           perform_action: input_datetime.set_datetime
                           data:
-                            time: '{{ value }}'
+                            time: "{{ value }}"
                           target:
                             entity_id: input_datetime.shellyt_pois
                         thumb: time
                         step: 60
                         range:
-                          - '00:00:00'
-                          - '23:59:59'
+                          - "00:00:00"
+                          - "23:59:59"
                         haptics: true
                   - type: custom:service-call
                     entries:
@@ -2236,14 +2236,14 @@ views:
                           action: perform-action
                           perform_action: input_datetime.set_datetime
                           data:
-                            time: '{{ value }}'
+                            time: "{{ value }}"
                           target:
                             entity_id: input_datetime.shellyt_pois_2
                         thumb: time
                         step: 300
                         range:
-                          - '00:00:00'
-                          - '23:59:59'
+                          - "00:00:00"
+                          - "23:59:59"
                         haptics: true
                 features_position: bottom
       - type: grid
@@ -2273,7 +2273,7 @@ views:
               xaxis:
                 type: datetime
                 tickAmount: 7
-                tickPlacement: 'on'
+                tickPlacement: "on"
                 labels:
                   hideOverlappingLabels: false
                   formatter: |
@@ -2526,7 +2526,7 @@ views:
               start: day
             now:
               show: true
-              label: ''
+              label: ""
             apex_config:
               grid:
                 show: true
@@ -2565,15 +2565,15 @@ views:
                 opacity: 1
                 color_threshold:
                   - value: -1
-                    color: '#6EFDEF'
+                    color: "#6EFDEF"
                   - value: 0
-                    color: '#6EFD99'
+                    color: "#6EFD99"
                   - value: 5
-                    color: '#FDE86E'
+                    color: "#FDE86E"
                   - value: 10
-                    color: '#FD6E6E'
+                    color: "#FD6E6E"
                   - value: 20
-                    color: '#BF40BF'
+                    color: "#BF40BF"
                 data_generator: >
                   const today = new Date(); const todayDate = today.getDate();
                   const
@@ -2607,19 +2607,19 @@ views:
                   in_chart: false
                 color_threshold:
                   - value: -1
-                    color: '#6EFDEF'
+                    color: "#6EFDEF"
                   - value: 0
-                    color: '#6EFD99'
+                    color: "#6EFD99"
                   - value: 10
-                    color: '#FDE86E'
+                    color: "#FDE86E"
                   - value: 20
-                    color: '#FD6E6E'
+                    color: "#FD6E6E"
               - entity: sensor.nordpool_average_today
                 yaxis_id: avg_price_today
                 name: Avg Today
                 type: line
                 stroke_width: 2
-                color: '#44aa88'
+                color: "#44aa88"
                 show:
                   legend_value: false
                 data_generator: >
@@ -3170,7 +3170,7 @@ views:
               tooltip:
                 x:
                   format: dd MMM HH:mm
-                'y':
+                "y":
                   formatter: |
                     EVAL: (value, { seriesIndex, w }) => {
                       const name = w?.config?.series?.[seriesIndex]?.name || '';
@@ -3220,15 +3220,15 @@ views:
                 opacity: 1
                 color_threshold:
                   - value: -1
-                    color: '#6EFDEF'
+                    color: "#6EFDEF"
                   - value: 0
-                    color: '#6EFD99'
+                    color: "#6EFD99"
                   - value: 5
-                    color: '#FDE86E'
+                    color: "#FDE86E"
                   - value: 10
-                    color: '#FD6E6E'
+                    color: "#FD6E6E"
                   - value: 20
-                    color: '#BF40BF'
+                    color: "#BF40BF"
                 data_generator: |
                   try {
                     const slots = entity.attributes.merged_slots || [];
@@ -3247,7 +3247,7 @@ views:
                 name: Avg Yesterday
                 type: line
                 stroke_width: 2
-                color: '#8888ff'
+                color: "#8888ff"
                 show:
                   legend_value: false
                 data_generator: >
@@ -3262,7 +3262,7 @@ views:
                 name: Avg Today
                 type: line
                 stroke_width: 2
-                color: '#44aa88'
+                color: "#44aa88"
                 show:
                   legend_value: false
                 data_generator: >
@@ -3283,7 +3283,7 @@ views:
                 name: Avg Tomorrow
                 type: line
                 stroke_width: 2
-                color: '#cc8800'
+                color: "#cc8800"
                 show:
                   legend_value: false
                 data_generator: >
@@ -3298,7 +3298,7 @@ views:
                 name: Active Threshold (Today)
                 type: line
                 stroke_width: 2
-                color: '#9a9a9a'
+                color: "#9a9a9a"
                 show:
                   legend_value: false
                 data_generator: >
