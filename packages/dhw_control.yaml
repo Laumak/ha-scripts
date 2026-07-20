@@ -1198,9 +1198,6 @@ dhw_control:
             service_data:
               entity_id: input_button.dhw_boost_start
       action:
-        - service: button.press
-          target:
-            entity_id: button.cu401b_s_activate_one_time_charge
         - service: input_datetime.set_datetime
           target:
             entity_id: input_datetime.dhw_boost_start_time
@@ -1241,9 +1238,6 @@ dhw_control:
           event_data:
             entity_id: timer.dhw_boost
       action:
-        - service: button.press
-          target:
-            entity_id: button.maalampo_deactivate_one_time_charge
         - variables:
             restore_temp: |
               {% set mode = states('input_select.dhw_heating_mode') %}
@@ -1284,9 +1278,6 @@ dhw_control:
             service_data:
               entity_id: input_button.dhw_boost_cancel
       action:
-        - service: button.press
-          target:
-            entity_id: button.maalampo_deactivate_one_time_charge
         - service: timer.cancel
           target:
             entity_id: timer.dhw_boost
