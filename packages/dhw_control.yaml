@@ -40,6 +40,14 @@ dhw_control:
       unit_of_measurement: "min"
       initial: 60
 
+    dhw_boost_temp:
+      name: DHW Boost Temperature
+      min: 45
+      max: 60
+      step: 1
+      unit_of_measurement: "°C"
+      initial: 55
+
     dhw_cheapest_window_hours:
       name: DHW Cheapest Window Length (h)
       min: 0.25
@@ -247,11 +255,14 @@ dhw_control:
           state_class: measurement
           state: |
             {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
+            {% set boost_on = is_state('timer.dhw_boost','active') %}
             {% set manual_on = is_state('binary_sensor.dhw_manual_today_active','on') %}
             {% set morning_ok = is_state('binary_sensor.dhw_morning_reasonable','on') %}
             {% set cheapest_on = is_state('binary_sensor.dhw_cheapest_window_active_now','on') %}
             {% set active_count = [vicare_boost, manual_on, morning_ok, cheapest_on] | select('true') | list | length %}
-            {% if vicare_boost %}
+            {% if boost_on %}
+              6
+            {% elif vicare_boost %}
               5
             {% elif manual_on and active_count > 1 %}
               1
@@ -269,6 +280,7 @@ dhw_control:
               0
             {% endif %}
           attributes:
+            boost: "{{ is_state('timer.dhw_boost','active') }}"
             vicare_boost: "{{ is_state('binary_sensor.maalampo_one_time_charge','on') }}"
             manual_window: "{{ is_state('binary_sensor.dhw_manual_today_active','on') }}"
             morning_window: "{{ is_state('binary_sensor.dhw_morning_reasonable','on') }}"
@@ -287,6 +299,8 @@ dhw_control:
                 MANUAL WINDOW
               {% elif code == 5 %}
                 VICARE BOOST
+              {% elif code == 6 %}
+                TIMER BOOST
               {% endif %}
 
         - name: "DHW Boost Elapsed Time"
@@ -777,6 +791,7 @@ dhw_control:
             {% set manual_on = is_state('binary_sensor.dhw_manual_today_active','on') %}
             {% set morning_ok = is_state('binary_sensor.dhw_morning_reasonable','on') %}
             {% set cheapest_on = is_state('binary_sensor.dhw_cheapest_window_active_now','on') %}
+            {% set boost_on = is_state('timer.dhw_boost','active') %}
             {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
             {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
             {% set thr = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
@@ -786,11 +801,11 @@ dhw_control:
             {% set cheapest_ok = cheapest_on and (price_now <= thr or price_now <= soft_cap) %}
 
             {% if mode == 'Automatic + Manual' %}
-              {{ vicare_boost or manual_on or morning_ok or cheapest_ok }}
+              {{ boost_on or vicare_boost or manual_on or morning_ok or cheapest_ok }}
             {% elif mode == 'Manual only' %}
-              {{ vicare_boost or manual_on }}
+              {{ boost_on or vicare_boost or manual_on }}
             {% else %}
-              {{ vicare_boost }}
+              {{ boost_on or vicare_boost }}
             {% endif %}
           attributes:
             reason: |
@@ -798,11 +813,13 @@ dhw_control:
               {% set manual_on = is_state('binary_sensor.dhw_manual_today_active','on') %}
               {% set morning_ok = is_state('binary_sensor.dhw_morning_reasonable','on') %}
               {% set cheapest_on = is_state('binary_sensor.dhw_cheapest_window_active_now','on') %}
+              {% set boost_on = is_state('timer.dhw_boost','active') %}
               {% set vicare_boost = is_state('binary_sensor.maalampo_one_time_charge','on') %}
               {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
               {% set thr = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
               {% set soft_cap = states('input_number.dhw_cheapest_soft_cap') | float(20) %}
               {% set tags = [] %}
+              {% if boost_on %}{% set tags = tags + ['BOOST TIMER'] %}{% endif %}
               {% if vicare_boost %}{% set tags = tags + ['VICARE BOOST'] %}{% endif %}
               {% if manual_on %}{% set tags = tags + ['MANUAL'] %}{% endif %}
               {% if mode == 'Automatic + Manual' %}
@@ -1174,7 +1191,14 @@ dhw_control:
           target:
             entity_id: timer.dhw_boost
           data:
-            duration: 0
+            duration: >
+              {% set minutes = states('input_number.dhw_boost_minutes') | int(60) %}
+              {{ '%02d:%02d:00' | format(minutes // 60, minutes % 60) }}
+        - service: water_heater.set_temperature
+          target:
+            entity_id: water_heater.cu401b_s_domestic_hot_water
+          data:
+            temperature: "{{ states('input_number.dhw_boost_temp') | float(55) | round(0) }}"
 
     # Stop mirroring timer when ViCare boost turns off
     - id: dhw_boost_timer_mirror_stop
@@ -1188,6 +1212,43 @@ dhw_control:
         - service: timer.cancel
           target:
             entity_id: timer.dhw_boost
+
+    - id: dhw_boost_timer_finished
+      alias: DHW Boost — finish temperature override
+      mode: single
+      trigger:
+        - platform: event
+          event_type: timer.finished
+          event_data:
+            entity_id: timer.dhw_boost
+      action:
+        - service: button.press
+          target:
+            entity_id: button.maalampo_deactivate_one_time_charge
+        - variables:
+            restore_temp: |
+              {% set mode = states('input_select.dhw_heating_mode') %}
+              {% set manual_on = is_state('binary_sensor.dhw_manual_today_active','on') %}
+              {% set morning_ok = is_state('binary_sensor.dhw_morning_reasonable','on') %}
+              {% set cheapest_on = is_state('binary_sensor.dhw_cheapest_window_active_now','on') %}
+              {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
+              {% set threshold = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
+              {% set soft_cap = states('input_number.dhw_cheapest_soft_cap') | float(20) %}
+              {% set cheapest_ok = cheapest_on and (price_now <= threshold or price_now <= soft_cap) %}
+              {% set should_heat_without_boost =
+                (mode == 'Automatic + Manual' and (manual_on or morning_ok or cheapest_ok))
+                or (mode == 'Manual only' and manual_on)
+              %}
+              {% if should_heat_without_boost | bool(false) %}
+                {{ states('input_number.dhw_target_temp') | float }}
+              {% else %}
+                {{ states('input_number.dhw_eco_temp') | float }}
+              {% endif %}
+        - service: water_heater.set_temperature
+          target:
+            entity_id: water_heater.cu401b_s_domestic_hot_water
+          data:
+            temperature: "{{ restore_temp | float | round(0) }}"
 
     # --------------------------------------------------
     # Phase 7 — DHW Boost: cancel from button
@@ -1210,6 +1271,31 @@ dhw_control:
         - service: timer.cancel
           target:
             entity_id: timer.dhw_boost
+
+        - variables:
+            restore_temp: |
+              {% set mode = states('input_select.dhw_heating_mode') %}
+              {% set manual_on = is_state('binary_sensor.dhw_manual_today_active','on') %}
+              {% set morning_ok = is_state('binary_sensor.dhw_morning_reasonable','on') %}
+              {% set cheapest_on = is_state('binary_sensor.dhw_cheapest_window_active_now','on') %}
+              {% set price_now = states('sensor.current_electricity_price_in_cents') | float(999) %}
+              {% set threshold = states('sensor.dhw_active_threshold_ckwh') | float(0) %}
+              {% set soft_cap = states('input_number.dhw_cheapest_soft_cap') | float(20) %}
+              {% set cheapest_ok = cheapest_on and (price_now <= threshold or price_now <= soft_cap) %}
+              {% set should_heat_without_boost =
+                (mode == 'Automatic + Manual' and (manual_on or morning_ok or cheapest_ok))
+                or (mode == 'Manual only' and manual_on)
+              %}
+              {% if should_heat_without_boost | bool(false) %}
+                {{ states('input_number.dhw_target_temp') | float }}
+              {% else %}
+                {{ states('input_number.dhw_eco_temp') | float }}
+              {% endif %}
+        - service: water_heater.set_temperature
+          target:
+            entity_id: water_heater.cu401b_s_domestic_hot_water
+          data:
+            temperature: "{{ restore_temp | float | round(0) }}"
 
     # If days_since_last_run ≥ 3 and a STRICT future window exists → schedule that window.
     # Else if days_since_last_run ≥ 7 and an ANY future window exists → schedule that window.
@@ -1372,10 +1458,14 @@ dhw_control:
       trigger:
         - platform: state
           entity_id: binary_sensor.dhw_should_heat_now
+        - platform: state
+          entity_id: timer.dhw_boost
       action:
         - variables:
             target_temp: |
-              {% if is_state('binary_sensor.dhw_should_heat_now','on') %}
+              {% if is_state('timer.dhw_boost','active') %}
+                {{ states('input_number.dhw_boost_temp') | float }}
+              {% elif is_state('binary_sensor.dhw_should_heat_now','on') %}
                 {{ states('input_number.dhw_target_temp') | float }}
               {% else %}
                 {{ states('input_number.dhw_eco_temp') | float }}
