@@ -2811,6 +2811,8 @@ views:
             entities:
               - entity: binary_sensor.dhw_manual_today_active
                 secondary_info: last-updated
+              - entity: input_boolean.dhw_manual_today_enable
+                name: Manual today enabled
               - entity: input_datetime.dhw_manual_today_start_slot1
                 name: Slot 1 Start
               - entity: input_datetime.dhw_manual_today_end_slot1

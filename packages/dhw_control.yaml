@@ -700,8 +700,6 @@ dhw_control:
     - binary_sensor:
         - name: "DHW manual today active"
           unique_id: dhw_manual_today_active
-          # TODO(manual-today): Today slots are ignored unless the enable helper is on.
-          # Add an explicit start/cancel flow so dashboard edits can reliably enable today's window.
           state: |
             {% if is_state('input_boolean.dhw_manual_today_enable','off') %}
               false
@@ -1045,44 +1043,65 @@ dhw_control:
 
   automation:
     - id: dhw_actuator_control
-      alias: DHW Actuator Control (NORMAL ↔ ECO)
-      mode: restart
-      # TODO(manual-today): This is cleanup logic, not actuator control.
-      # It can clear today's manual slots when dhw_should_heat_now changes.
-      # Rename or replace it when the manual-today flow is fixed.
+      alias: DHW manual today end-of-day cleanup
+      mode: single
       trigger:
-        - platform: state
-          entity_id: binary_sensor.dhw_should_heat_now
-      condition:
-        - condition: template
-          value_template: |
-            {% set tomorrow = [
-              states('input_datetime.dhw_manual_tomorrow_start_slot1'),
-              states('input_datetime.dhw_manual_tomorrow_end_slot1'),
-              states('input_datetime.dhw_manual_tomorrow_start_slot2'),
-              states('input_datetime.dhw_manual_tomorrow_end_slot2')
-            ] %}
-            {% set is_empty = tomorrow | select('in', ['unknown','unavailable','']) | list | length == 4 %}
-            {% set is_zero = tomorrow | select('equalto', '00:00:00') | list | length == 4 %}
-            {{ is_empty or is_zero }}
+        - platform: time
+          at: "23:55:00"
       action:
-        # Reset today's slots to zero
         - service: input_datetime.set_datetime
-          target: { entity_id: input_datetime.dhw_manual_today_start_slot1 }
-          data: { time: "00:00:00" }
-        - service: input_datetime.set_datetime
-          target: { entity_id: input_datetime.dhw_manual_today_end_slot1 }
-          data: { time: "00:00:00" }
-        - service: input_datetime.set_datetime
-          target: { entity_id: input_datetime.dhw_manual_today_start_slot2 }
-          data: { time: "00:00:00" }
-        - service: input_datetime.set_datetime
-          target: { entity_id: input_datetime.dhw_manual_today_end_slot2 }
-          data: { time: "00:00:00" }
-        # Disable manual mode
+          target:
+            entity_id:
+              - input_datetime.dhw_manual_today_start_slot1
+              - input_datetime.dhw_manual_today_end_slot1
+              - input_datetime.dhw_manual_today_start_slot2
+              - input_datetime.dhw_manual_today_end_slot2
+          data:
+            time: "00:00:00"
         - service: input_boolean.turn_off
           target:
             entity_id: input_boolean.dhw_manual_today_enable
+
+    - id: dhw_manual_today_enable_from_slots
+      alias: DHW manual today - enable from valid slots
+      mode: restart
+      trigger:
+        - platform: state
+          entity_id:
+            - input_datetime.dhw_manual_today_start_slot1
+            - input_datetime.dhw_manual_today_end_slot1
+            - input_datetime.dhw_manual_today_start_slot2
+            - input_datetime.dhw_manual_today_end_slot2
+        - platform: homeassistant
+          event: start
+      action:
+        - variables:
+            start1: "{{ states('input_datetime.dhw_manual_today_start_slot1') }}"
+            end1: "{{ states('input_datetime.dhw_manual_today_end_slot1') }}"
+            start2: "{{ states('input_datetime.dhw_manual_today_start_slot2') }}"
+            end2: "{{ states('input_datetime.dhw_manual_today_end_slot2') }}"
+            has_slot1: |
+              {{
+                start1 not in ['unknown','unavailable','', '00:00:00']
+                and end1 not in ['unknown','unavailable','', '00:00:00']
+                and start1 != end1
+              }}
+            has_slot2: |
+              {{
+                start2 not in ['unknown','unavailable','', '00:00:00']
+                and end2 not in ['unknown','unavailable','', '00:00:00']
+                and start2 != end2
+              }}
+        - choose:
+            - conditions: "{{ has_slot1 or has_slot2 }}"
+              sequence:
+                - service: input_boolean.turn_on
+                  target:
+                    entity_id: input_boolean.dhw_manual_today_enable
+          default:
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.dhw_manual_today_enable
 
     - id: dhw_midnight_copy_manual_tomorrow
       alias: DHW midnight - copy tomorrow's manual slots to today (conditional)
