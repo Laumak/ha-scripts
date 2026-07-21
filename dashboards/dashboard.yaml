@@ -2811,6 +2811,8 @@ views:
             entities:
               - entity: binary_sensor.dhw_manual_today_active
                 secondary_info: last-updated
+              - entity: input_boolean.dhw_manual_today_enable
+                name: Manual today enabled
               - entity: input_datetime.dhw_manual_today_start_slot1
                 name: Slot 1 Start
               - entity: input_datetime.dhw_manual_today_end_slot1
@@ -3031,7 +3033,7 @@ views:
                   states('binary_sensor.dhw_manual_today_active') }}`
 
                   - **Boost active:** `{{
-                  states('binary_sensor.maalampo_one_time_charge') }}`
+                  states('timer.dhw_boost') }}`
 
                   - **Heating mode:** `{{
                   states('input_select.dhw_heating_mode') }}`
@@ -3042,6 +3044,10 @@ views:
                 entities:
                   - entity: sensor.dhw_boost_elapsed_time
                     name: Boost (elapsed)
+                  - entity: input_number.dhw_boost_minutes
+                    name: Boost duration
+                  - entity: input_number.dhw_boost_temp
+                    name: Boost temperature
                   - entity: input_button.dhw_boost_start
                     name: Start
                   - entity: input_button.dhw_boost_cancel
